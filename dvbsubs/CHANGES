@@ -3,7 +3,7 @@ Version 0.3  - Major internal code cleanup
                Added first version of dvbsubs.c to decode DVB subtitles
                Added "-pts" parameter to dvbtextsubs to specify a PTS offset
                Removed DVB tuning facilities (just pipe from dvbstream)
-               Added "MicroDVD" subtitle format output for dvbtextsubs
+               Added "Subviewer" subtitle format output for dvbtextsubs
 
 Version 0.2b - Corrected language encodings in vtxdecode.h and added support
                for the French code page.

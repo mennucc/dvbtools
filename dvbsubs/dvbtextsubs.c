@@ -60,12 +60,12 @@ USAGE: dvbtextsubs pid pageno\n\
 or     dvbtextsubs -vdr pageno\n\n\
 The DVB stream must be piped to dvbtextsubs.  e.g.:\n\n\
 cat 0*.vdr | dvbtextsubs > output.xml\n\n\
-Options: -microdvd       Output subtitles in MicroDVD format\n\
-         -pts            PTS offset (in ms) to add to every PTS in output file\n"
+Options: -srt      Output subtitles in Subviewer format\n\
+         -pts      PTS offset (in ms) to add to every PTS in output file\n"
 
 typedef enum {
    SUBFORMAT_XML,
-   SUBFORMAT_MICRODVD
+   SUBFORMAT_SUBVIEWER
 } subformat_t;
 
 subformat_t subformat;
@@ -105,6 +105,7 @@ uint64_t first_audio_pts=0;
 uint64_t video_pts=0;
 uint64_t first_video_pts=0;
 uint64_t FIRST_PTS=0;
+int sub_count=0;
 
 typedef struct {
   unsigned char lang;
@@ -280,7 +281,7 @@ void print_xml(FILE* fd, subtitle_t* subtitle) {
   fprintf(fd,"    </spu>\n");
 }
 
-void print_microdvd(FILE* fd, subtitle_t* subtitle) {
+void print_subviewer(FILE* fd, subtitle_t* subtitle) {
   int i;
   char ch;
   int row;
@@ -313,13 +314,11 @@ void print_microdvd(FILE* fd, subtitle_t* subtitle) {
   }
 
   fprintf(stderr,"%s\r",pts2hmsu(subtitle->start_PTS));
-  fprintf(fd,"{%lld}",(subtitle->start_PTS+FIRST_PTS)/40);
-  fprintf(fd,"{%lld}",((subtitle->end_PTS+FIRST_PTS)/40)-1);
+  fprintf(fd,"%d\n%s --> %s\n",++sub_count,pts2hmsu(subtitle->start_PTS),pts2hmsu(subtitle->end_PTS));
   
   j=0;
   for (row=0;row<subtitle->num_lines;row++) {
     colour=-1;
-    if (j>0) { fprintf(fd,"|"); }
     for (i=1;i<=40;i++) {
       ch=subtitle->lines[row][i-1]&0x7f;
       if (ch >= ' ') {
@@ -347,7 +346,7 @@ void print_microdvd(FILE* fd, subtitle_t* subtitle) {
       }
     }
     //    if (colour!=-1) fprintf(fd,"</%s>",colours[colour]);
-    //    fprintf(fd,"</line>\n");
+    fprintf(fd,"\n");
   }
   fprintf(fd,"\n");
 }
@@ -377,7 +376,7 @@ void print_page(mag_struct *mag) {
     prev_subtitle.end_PTS=subtitle.start_PTS; // Store the end time anyway - some formats need it.
     switch (subformat) {
       case SUBFORMAT_XML: print_xml(stdout,&prev_subtitle); break;
-      case SUBFORMAT_MICRODVD: print_microdvd(stdout,&prev_subtitle); break;
+      case SUBFORMAT_SUBVIEWER: print_subviewer(stdout,&prev_subtitle); break;
       default: break;
     }
     prev_subtitle=subtitle;
@@ -583,8 +582,8 @@ int main(int argc, char** argv) {
         debug=1;
       } else if (strcmp(argv[i],"-vdr")==0) {
         pes_format=1;
-      } else if (strcmp(argv[i],"-microdvd")==0) {
-        subformat=SUBFORMAT_MICRODVD;
+      } else if (strcmp(argv[i],"-srt")==0) {
+        subformat=SUBFORMAT_SUBVIEWER;
       } else if (strcmp(argv[i],"-pts")==0) {
         i++;
         USER_PTS=atoi(argv[i]);
