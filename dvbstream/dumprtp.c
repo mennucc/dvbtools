@@ -34,9 +34,17 @@ void dumprtp(int socket) {
   char* buf;
   struct rtpheader rh;
   int lengthData;
+  unsigned short seq=0;
+  int flag=0;
 
   while(1) {
     getrtp2(socket,&rh, &buf,&lengthData);
+    if (flag==0) { seq=rh.b.sequence; flag=1; }
+    if (seq!=rh.b.sequence) {
+      fprintf(stderr,"rtptsaudio: NETWORK CONGESTION - expected %d, received %d\n",seq,rh.b.sequence);
+      seq=rh.b.sequence;
+    }
+    seq++;
     write(1,buf,lengthData);
   }
 }
