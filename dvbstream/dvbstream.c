@@ -92,6 +92,7 @@ fe_code_rate_t HP_CodeRate=HP_CODERATE_DEFAULT, LP_CodeRate=LP_CODERATE_DEFAULT;
 fe_hierarchy_t hier=HIERARCHY_DEFAULT;
 unsigned char diseqc=0;
 char pol=0;
+int streamtype = RTP;
 
 int open_fe(int* fd_frontend) {
     if((*fd_frontend = open(frontenddev[card],O_RDWR | O_NONBLOCK)) < 0){
@@ -497,6 +498,8 @@ int main(int argc, char **argv)
     fprintf(stderr,"-tm N       DVB-T transmission mode - N=2%s or 8%s\n",(TRANSMISSION_MODE_DEFAULT==TRANSMISSION_MODE_2K ? " (default)" : ""),(TRANSMISSION_MODE_DEFAULT==TRANSMISSION_MODE_8K ? " (default)" : ""));
     fprintf(stderr,"-hy N       DVB-T hierarchy - N=1%s, 2%s, 4%s, NONE%s or AUTO%s\n",(HIERARCHY_DEFAULT==HIERARCHY_1 ? " (default)" : ""),(HIERARCHY_DEFAULT==HIERARCHY_2 ? " (default)" : ""),(HIERARCHY_DEFAULT==HIERARCHY_4 ? " (default)" : ""),(HIERARCHY_DEFAULT==HIERARCHY_NONE ? " (default)" : ""),(HIERARCHY_DEFAULT==HIERARCHY_AUTO ? " (default)" : ""));
     fprintf(stderr,"-ttl N      Sets TTL to N (default: 2) when streaming in RTP\n");
+    fprintf(stderr,"-rtp N      Sets output type to RTP (default when using network out)\n");
+    fprintf(stderr,"-udp N      Sets output type to UDP \n");
 
     fprintf(stderr,"\n-analyse    Perform a simple analysis of the bitrates of the PIDs in the transport stream\n");
 
@@ -509,6 +512,10 @@ int main(int argc, char **argv)
     for (i=1;i<argc;i++) {
       if (strcmp(argv[i],"-ps")==0) {
         output_type=RTP_PS;
+      } else if(!strcmp(argv[i],"-rtp")) {
+        streamtype = RTP;
+      } else if(!strcmp(argv[i],"-udp")) {
+        streamtype = UDP;
       } else if (strcmp(argv[i],"-analyse")==0) {
         do_analyse=1;
         output_type=RTP_NONE;
@@ -558,7 +565,7 @@ int main(int argc, char **argv)
 	    pids_map[map_cnt-1].pos = 0;
 	 
 	    pids_map[map_cnt-1].socket = makesocket(addr,port,ttl,&(pids_map[map_cnt-1].sOut));
-    	    initrtp(&(pids_map[map_cnt-1].hdr),(output_type==RTP_TS ? 33 : 34));
+    	    initrtp(&(pids_map[map_cnt-1].hdr),(output_type==RTP_TS ? 33 : 34), streamtype);
     	    output_type = MAP_TS;
 	  } else
 	      fprintf(stderr, "Couldn't alloc enough entry for this %s:%d address\n", addr, port); 
@@ -894,7 +901,7 @@ int main(int argc, char **argv)
       /* Init RTP */
       socketOut = makesocket(ipOut,portOut,ttl,&sOut);
       #warning WHAT SHOULD THE PAYLOAD TYPE BE FOR "MPEG-2 PS" ?
-      initrtp(&hdr,(output_type==RTP_TS ? 33 : 34));
+      initrtp(&hdr,(output_type==RTP_TS ? 33 : 34), streamtype);
       fprintf(stderr,"version=%X\n",hdr.b.v);
     }
     fprintf(stderr,"Streaming %d stream%s\n",npids,(npids==1 ? "" : "s"));

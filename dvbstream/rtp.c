@@ -53,7 +53,7 @@
 */
 
 
-void initrtp(struct rtpheader *foo,int pt) { /* fill in the MPEG-2 TS deefaults */
+void initrtp(struct rtpheader *foo,int pt, int type) { /* fill in the MPEG-2 TS deefaults */
   /* Note: MPEG-2 TS defines a timestamping base frequency of 90000 Hz. */
   foo->b.v=2;
   foo->b.p=0;
@@ -64,6 +64,7 @@ void initrtp(struct rtpheader *foo,int pt) { /* fill in the MPEG-2 TS deefaults 
   foo->b.sequence=rand() & 65535;
   foo->timestamp=rand();
   foo->ssrc=rand();
+  foo->type = type;
 }
 
 /* Send a single RTP packet, converting the RTP header to network byte order. */
@@ -121,10 +122,12 @@ int getrtp2(int fd, struct rtpheader *rh, char** data, int* lengthData) {
 
 /* Send a single RTP packet, converting the RTP header to network byte order. */
 int sendrtp2(int fd, struct sockaddr_in *sSockAddr, struct rtpheader *foo, char *data, int len) {
-  char *buf=(char*)alloca(len+72);
+  char *buf;
   unsigned int intP;
   char* charP = (char*) &intP;
   int headerSize;
+  if(foo->type == RTP) {
+  buf=(char*)alloca(len+72);
   buf[0]  = 0x00;
   buf[0] |= ((((char) foo->b.v)<<6)&0xc0);
   buf[0] |= ((((char) foo->b.p)<<5)&0x20);
@@ -148,6 +151,10 @@ int sendrtp2(int fd, struct sockaddr_in *sSockAddr, struct rtpheader *foo, char 
   //  fprintf(stderr,"Sending rtp: v=%x p=%x x=%x cc=%x m=%x pt=%x seq=%x ts=%x lgth=%d\n",foo->b.v,foo->b.p,foo->b.x,foo->b.cc,foo->b.m,foo->b.pt,foo->b.sequence,foo->timestamp,len+headerSize);
 
   foo->b.sequence++;
+  } else {	//UDP
+    buf = data;
+    headerSize = 0;
+  }
   return sendto(fd,buf,len+headerSize,0,(struct sockaddr *)sSockAddr,sizeof(*sSockAddr));
 }
 

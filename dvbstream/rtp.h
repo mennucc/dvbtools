@@ -4,6 +4,7 @@
 #include <sys/socket.h>
 
 enum {RTP_PS,RTP_TS,RTP_NONE,MAP_TS};
+enum {RTP, UDP};
 
 struct rtpbits {
   unsigned int v:2;           /* version: 2 */
@@ -19,10 +20,11 @@ struct rtpheader {	/* in network byte order */
   struct rtpbits b;
   int timestamp;	/* start: random */
   int ssrc;		/* random */
+  int type;		/* RTP or UDP */
 };
 
 
-void initrtp(struct rtpheader *foo,int pt); /* fill in the MPEG-2 TS deefaults */
+void initrtp(struct rtpheader *foo,int pt, int type); /* fill in the MPEG-2 TS deefaults */
 int sendrtp(int fd, struct sockaddr_in *sSockAddr, struct rtpheader *foo, char *data, int len);
 int getrtp2(int fd, struct rtpheader *rh, char** data, int* lengthData);
 int sendrtp2(int fd, struct sockaddr_in *sSockAddr, struct rtpheader *foo, char *data, int len);
