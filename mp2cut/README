@@ -9,8 +9,8 @@ Just type "make".
 
 USAGE:
 
-Remember: Each MPEG audio frame represents 0.024 seconds - i.e. there
-are just under 42 frames in one second.
+Remember: Each MPEG audio frame (at 48KHz) represents 0.024 seconds -
+i.e. there are just under 42 frames in one second.
 
 1) To print information on a file and test for corruption:
 
@@ -26,5 +26,4 @@ mp2cut -e 8010 < infile.mp2 | mpg123 -
 
 4) To cut frames 102 to 8010 from infile.mp2 to outfile.mp2
 
-mp2cut -s 102 -e 8010 < infile.mp2 | mpg123 -
-
+mp2cut -s 102 -e 8010 < infile.mp2 > outfile.mp2
