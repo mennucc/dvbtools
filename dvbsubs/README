@@ -33,14 +33,15 @@ dvbtextsubs pid pageno < recording.ts > subtitles.xml
 
 or from a set of ".vdr" files recorded using VDR:
 
-cat 0*.vdr | dvbtextsubs pageno > subtitles.xml
+cat 0*.vdr | dvbtextsubs -vdr pageno > subtitles.xml
 
 The "pid" is probably the same as the teletext PID for the channel.
 However, on some channels, the subtitles are broadcast on a different
 PID to normal teletext.
 
-The "pageno" is the teletext page containing the subtitles.  This is
-commonly page 888, but can be any page.
+The "pageno" is the teletext page containing the subtitles.  This
+varies by country (and broadcaster), common choices are 888, 777 or
+699 but it can be any page
 
 You can then generate a set of PNG files from this XML file by using
 the "xml2spumux" program:
