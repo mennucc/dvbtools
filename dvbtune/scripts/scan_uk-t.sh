@@ -12,15 +12,15 @@
 
 # NOTE: CHANGE CARD TO SUIT YOUR SYSTEM - FIRST CARD IS "0", SECOND IS "1" etc
 
-CARD=1
+CARD=0
 DVBTUNE=../dvbtune
 
 echo '<?xml version="1.0"?>'
 echo '<satellite>'
-$DVBTUNE -c $CARD -f 505833000 -i
-$DVBTUNE -c $CARD -f 481833000 -i
-$DVBTUNE -c $CARD -f 561833000 -i
-$DVBTUNE -c $CARD -f 529833000 -i
-$DVBTUNE -c $CARD -f 578166000 -i
-$DVBTUNE -c $CARD -f 537833000 -i
+$DVBTUNE -c $CARD -f 505833 -i
+$DVBTUNE -c $CARD -f 481833 -i
+$DVBTUNE -c $CARD -f 561833 -i
+$DVBTUNE -c $CARD -f 529833 -qam 16 -cr 3_4 -i
+$DVBTUNE -c $CARD -f 578166 -qam 16 -cr 3_4 -i
+$DVBTUNE -c $CARD -f 537833 -qam 16 -cr 3_4 -i
 echo '</satellite>'
