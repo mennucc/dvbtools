@@ -1,5 +1,5 @@
-DVBstream - v0.4pre2
---------------------
+DVBstream - v0.4
+----------------
 
 INTRODUCTION
 
@@ -30,6 +30,10 @@ INSTALLATION
 
 Just type "make" to compile (you may need to change the path to the
 DVB include files in the first line of the Makefile).
+
+If you are using dvbtune for DVB-T in Finland, you should replace the
+"make" command with "make FINLAND=1". or "make FINLAND2=1" (see the
+comments in the dvb_defaults.h file for details).
 
 USAGE - SERVER
 
