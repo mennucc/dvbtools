@@ -36,6 +36,17 @@
 unsigned char buf[100000];
 int i=0;
 
+ssize_t safe_read(int fd, void *buf, size_t count) {
+ ssize_t n,tot;
+
+ tot=0;
+ while (tot < count) {
+   n=read(fd,buf,count-tot);
+   tot+=n;
+ }
+ return(tot);
+}
+
 void set_filt(int fd,uint16_t tt_pid, dmxPesType_t t)
 {
 	size_t bytesRead;
@@ -51,6 +62,17 @@ void set_filt(int fd,uint16_t tt_pid, dmxPesType_t t)
 		perror("DMX SET PES FILTER:");
 }
 
+void process_pixel_data_sub_block(int n) {
+  int data_type;
+
+  data_type=buf[i];
+
+  printf("<data_type>%02x</data_type>\n",data_type);
+
+//  printf("buf=%02x %02x %02x %02x %02x\n",buf[i],buf[i+1],buf[i+2],buf[i+3],buf[i+4]);
+
+  i+=n;
+}
 void process_page_composition_segment() {
   int segment_type,
       page_id,
@@ -273,10 +295,16 @@ void process_object_data_segment() {
   printf("<object_coding_method>%d</object_coding_method>\n",object_coding_method);
   printf("<non_modifying_colour_flag>%d</non_modifying_colour_flag>\n",non_modifying_colour_flag);
 
-  while (i < j) {
-    i++;
-  }
+  if (object_coding_method==0) {
+    top_field_data_block_length=(buf[i]<<8)|buf[i+1]; i+=2;
+    bottom_field_data_block_length=(buf[i]<<8)|buf[i+1]; i+=2;
 
+    printf("<pixel_data_sub_block length=\"0x%04x\"/>\n",top_field_data_block_length);
+    process_pixel_data_sub_block(top_field_data_block_length);
+
+    printf("<pixel_data_sub_block length=\"0x%04x\"/>\n",bottom_field_data_block_length);
+    process_pixel_data_sub_block(bottom_field_data_block_length);
+  }
   printf("</object_data_segment>\n");
 }
 
@@ -286,12 +314,15 @@ int main(int argc, char* argv[]) {
   int fd;
   int x;
   int pid;
+  int is_num;
 
   int stream_id,
       PES_packet_length;
 
+  unsigned long long PTS;
   unsigned char PTS_1;
   unsigned short PTS_2,PTS_3;
+  double PTS_secs;
 
   int segment_length,
       segment_type;
@@ -301,9 +332,14 @@ int main(int argc, char* argv[]) {
     fprintf(stderr,"    or dvbsubs PID\n");
     exit(0);
   }
-  
-  pid=atoi(argv[1]);
-  if (pid > 0) {
+
+  is_num=1;
+  for (n=0;n<strlen(argv[1]);n++) {
+    if (!(isdigit(argv[1][n]))) is_num=0;
+  }
+      
+  if (is_num) {
+    pid=atoi(argv[1]);
     if((fd = open("/dev/ost/demux",O_RDWR)) < 0){
       perror("DEMUX DEVICE 1: ");
       return -1;
@@ -320,16 +356,20 @@ int main(int argc, char* argv[]) {
   printf("<?xml version=\"1.0\" ?>\n");
   while (1) {
     /* READ PES PACKET */
-    n=read(fd,buf,6);
+    n=safe_read(fd,buf,3);
 
-    if ((buf[0]!=0) || (buf[1]!=0) || (buf[2]!=1)) {
-      fprintf(stdout,"CAN NOT FIND PES PACKET\n");
-      exit(-1);
+    while((buf[0]!=0) || (buf[1]!=0) || (buf[2]!=1)) {
+      buf[0]=buf[1];
+      buf[1]=buf[2];
+      n=safe_read(fd,&buf[2],1);
     }
     i=3;
+
+    n=safe_read(fd,&buf[3],3);
     stream_id=buf[i++];
     PES_packet_length=(buf[i]<<8)|buf[i+1]; i+=2;
-    n=read(fd,&buf[6],PES_packet_length);
+    n=safe_read(fd,&buf[6],PES_packet_length);
+    if (n!=PES_packet_length) { exit(-1); }
 
     i++;  // Skip some boring PES flags
     if (buf[i]!=0x80) {
@@ -342,14 +382,19 @@ int main(int argc, char* argv[]) {
      exit(-1);
     }
     i++;  // Header data length
-    PTS_1=(buf[i++]&0x0e)<<28;  // 3 bits
+    PTS_1=(buf[i++]&0x0e)>>1;  // 3 bits
     PTS_2=(buf[i]<<7)|((buf[i+1]&0xfe)>>1);         // 15 bits
     i+=2;
     PTS_3=(buf[i]<<7)|((buf[i+1]&0xfe)>>1);         // 15 bits
     i+=2;
 
-    printf("<pes_packet data_identifier=\"0x%02x\">\n",buf[i++]);
-    printf("<pts pts1=\"0x%01x\"  pts2=\"0x%04x\"  pts3=\"0x%04x\" />\n",PTS_1,PTS_2,PTS_3);
+    PTS=PTS_1;
+    PTS=(PTS << 15)|PTS_2;
+    PTS=(PTS << 15)|PTS_3;
+
+    PTS_secs=(PTS/90000.0);
+
+    printf("<pes_packet data_identifier=\"0x%02x\" pts_secs=\"%.02f\">\n",buf[i++],PTS_secs);
     printf("<subtitle_stream id=\"0x%02x\">\n",buf[i++]);
     while (buf[i]==0x0f) {
       /* SUBTITLING SEGMENT */
@@ -374,6 +419,5 @@ int main(int argc, char* argv[]) {
     }   
     printf("</subtitle_stream>\n");
     printf("</pes_packet>\n");
-    exit(0);
   }
 }
