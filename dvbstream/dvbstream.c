@@ -497,10 +497,19 @@ int main(int argc, char **argv)
             pol='H';
           }
         }
-      } else if (strcmp(argv[i],"-s")==0) {
+      } 
+      else if (strcmp(argv[i],"-s")==0) {
         i++;
         srate=atoi(argv[i])*1000UL;
-      } else if (strcmp(argv[i],"-o")==0) {
+      } 
+      else if (strcmp(argv[i],"-D")==0) 
+      {
+        i++;
+        diseqc=atoi(argv[i]);
+	if(diseqc < 0 || diseqc > 4)
+		diseqc = 0;	
+      } 
+      else if (strcmp(argv[i],"-o")==0) {
         to_stdout = 1;
       } else if (strcmp(argv[i],"-n")==0) {
         i++;
