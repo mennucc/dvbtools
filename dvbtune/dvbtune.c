@@ -1020,6 +1020,12 @@ int main(int argc, char **argv)
   unsigned int diseqc = 0;
   int ttpid=0;
   int dpid=0;
+
+  Modulation modulation=CONSTELLATION_DEFAULT;
+  TransmitMode TransmissionMode=TRANSMISSION_MODE_DEFAULT;
+  BandWidth bandWidth=BANDWIDTH_DEFAULT;
+  GuardInterval guardInterval=GUARD_INTERVAL_DEFAULT;
+  CodeRate HP_CodeRate=HP_CODERATE_DEFAULT;
   int count;
   transponder_t * t;
 
@@ -1027,25 +1033,31 @@ int main(int argc, char **argv)
   
   if (argc==1) {
     fprintf(stderr,"Usage: dvbtune [OPTIONS]\n\n");
-    fprintf(stderr,"The following options are available:\n\n");
-    fprintf(stderr,"-c [0-3]   Use DVB device [0-3]\n");
-    fprintf(stderr,"-f freq    absolute Frequency (DVB-S in Hz or DVB-T in Hz)\n");
-    fprintf(stderr,"           or L-band Frequency (DVB-S in Hz or DVB-T in Hz)\n");
-    fprintf(stderr,"-p [H,V]   Polarity (DVB-S only)\n");
-    fprintf(stderr,"-t [0|1]   0=22kHz off, 1=22kHz on\n");
-    fprintf(stderr,"-I [0|1|2] 0=Spectrum Inversion off, 1=Spectrum Inversion on, 2=auto\n");
-    fprintf(stderr,"-s N       Symbol rate (DVB-S only)\n");
-    fprintf(stderr,"-D [0-4]   DiSEqC command (0=none)\n\n");
+    fprintf(stderr,"Standard options:\n\n");
+    fprintf(stderr,"-f freq     absolute Frequency (DVB-S in Hz or DVB-T in Hz)\n");
+    fprintf(stderr,"            or L-band Frequency (DVB-S in Hz or DVB-T in Hz)\n");
+    fprintf(stderr,"-p [H,V]    Polarity (DVB-S only)\n");
+    fprintf(stderr,"-s N        Symbol rate (DVB-S or DVB-C)\n");
+    fprintf(stderr,"-v vpid     Decode video PID (full cards only)\n");
+    fprintf(stderr,"-a apid     Decode audio PID (full cards only)\n");
+    fprintf(stderr,"-t ttpid    Decode teletext PID (full cards only)\n");
+    fprintf(stderr,"-pnr N      Tune to Program Number (aka service) N\n\n");
+    fprintf(stderr,"-i          Dump SI information as XML\n");
 
-    fprintf(stderr,"-V vpid    Set video PID (full cards only)\n");
-    fprintf(stderr,"-A apid    Set audio PID (full cards only)\n");
-    fprintf(stderr,"-T ttpid   Set teletext PID (full cards only)\n");
-    fprintf(stderr,"-pnr N     Tune to Program Number (aka service) N\n\n");
+    fprintf(stderr,"\nAdvanced tuning options:\n\n");
+    fprintf(stderr,"-c [0-3]    Use DVB card #[0-3]\n");
+    fprintf(stderr,"-tone [0|1] 0=22kHz off, 1=22kHz on\n");
+    fprintf(stderr,"-I [0|1|2]  0=Spectrum Inversion off, 1=Spectrum Inversion on, 2=auto\n");
+    fprintf(stderr,"-D [0-4]    DiSEqC command (0=none)\n\n");
+    fprintf(stderr,"-qam X      DVB-T modulation - 16%s, 32%s, 64%s, 128%s or 256%s\n",(CONSTELLATION_DEFAULT==QAM_16 ? " (default)" : ""),(CONSTELLATION_DEFAULT==QAM_32 ? " (default)" : ""),(CONSTELLATION_DEFAULT==QAM_64 ? " (default)" : ""),(CONSTELLATION_DEFAULT==QAM_128 ? " (default)" : ""),(CONSTELLATION_DEFAULT==QAM_256 ? " (default)" : ""));
+    fprintf(stderr,"-gi N       DVB-T guard interval 1_N (N=32%s, 16%s, 8%s or 4%s)\n",(GUARD_INTERVAL_DEFAULT==GUARD_INTERVAL_1_32 ? " (default)" : ""),(GUARD_INTERVAL_DEFAULT==GUARD_INTERVAL_1_16 ? " (default)" : ""),(GUARD_INTERVAL_DEFAULT==GUARD_INTERVAL_1_8 ? " (default)" : ""),(GUARD_INTERVAL_DEFAULT==GUARD_INTERVAL_1_4 ? " (default)" : ""));
+    fprintf(stderr,"-cr N       DVB-T code rate. N=AUTO%s, 1_2%s, 2_3%s, 3_4%s, 5_6%s, 7_8%s\n",(HP_CODERATE_DEFAULT==FEC_AUTO ? " (default)" : ""),(HP_CODERATE_DEFAULT==FEC_1_2 ? " (default)" : ""),(HP_CODERATE_DEFAULT==FEC_2_3 ? " (default)" : ""),(HP_CODERATE_DEFAULT==FEC_3_4 ? " (default)" : ""),(HP_CODERATE_DEFAULT==FEC_5_6 ? " (default)" : ""),(HP_CODERATE_DEFAULT==FEC_7_8 ? " (default)" : ""));
+    fprintf(stderr,"-bw N       DVB-T bandwidth (Mhz) - N=6%s, 7%s or 8%s\n",(BANDWIDTH_DEFAULT==BANDWIDTH_8_MHZ ? " (default)" : ""),(BANDWIDTH_DEFAULT==BANDWIDTH_7_MHZ ? " (default)" : ""),(BANDWIDTH_DEFAULT==BANDWIDTH_6_MHZ ? " (default)" : ""));
+    fprintf(stderr,"-tm N       DVB-T transmission mode - N=2%s or 8%s\n",(TRANSMISSION_MODE_DEFAULT==TRANSMISSION_MODE_2K ? " (default)" : ""),(TRANSMISSION_MODE_DEFAULT==TRANSMISSION_MODE_8K ? " (default)" : ""));
 
-    fprintf(stderr,"-i         Dump SI information as XML\n");
-    fprintf(stderr,"-x         Attempt to auto-find other transponders (experimental)\n");
-    fprintf(stderr,"-m         Monitor the reception quality\n");
-    fprintf(stderr,"-n dpid    Add network interface and receive MPE on PID dpid\n");
+    fprintf(stderr,"-x          Attempt to auto-find other transponders (experimental - DVB-S only)\n");
+    fprintf(stderr,"-m          Monitor the reception quality\n");
+    fprintf(stderr,"-n dpid     Add network interface and receive MPE on PID dpid\n");
     fprintf(stderr,"\n");
     return(-1);
   } else {
@@ -1070,17 +1082,17 @@ int main(int argc, char **argv)
         }
       } else if (strcmp(argv[i],"-x")==0) { // 
         do_scan=1;
-      } else if (strcmp(argv[i],"-V")==0) {
+      } else if (strcmp(argv[i],"-v")==0) {
         i++;
         vpid=atoi(argv[i]);
       } else if (strcmp(argv[i],"-pnr")==0) {
         i++;
         pnr=atoi(argv[i]);
         do_info=1;
-      } else if (strcmp(argv[i],"-A")==0) {
+      } else if (strcmp(argv[i],"-a")==0) {
         i++;
         apid=atoi(argv[i]);
-      } else if (strcmp(argv[i],"-T")==0) {
+      } else if (strcmp(argv[i],"-t")==0) {
         i++;
         ttpid=atoi(argv[i]);
       } else if (strcmp(argv[i],"-p")==0) {
@@ -1095,6 +1107,66 @@ int main(int argc, char **argv)
       } else if (strcmp(argv[i],"-s")==0) {
         i++;
         srate=atoi(argv[i])*1000UL;
+      } else if (strcmp(argv[i],"-qam")==0) {
+        i++;
+        switch(atoi(argv[i])) {
+          case 16:  modulation=QAM_16; break;
+          case 32:  modulation=QAM_32; break;
+          case 64:  modulation=QAM_64; break;
+          case 128: modulation=QAM_128; break;
+          case 256: modulation=QAM_256; break;
+          default:
+            fprintf(stderr,"Invalid QAM rate: %s\n",argv[i]);
+            exit(0);
+        }
+      } else if (strcmp(argv[i],"-gi")==0) {
+        i++;
+        switch(atoi(argv[i])) {
+          case 32:  guardInterval=GUARD_INTERVAL_1_32; break;
+          case 16:  guardInterval=GUARD_INTERVAL_1_16; break;
+          case 8:   guardInterval=GUARD_INTERVAL_1_8; break;
+          case 4:   guardInterval=GUARD_INTERVAL_1_4; break;
+          default:
+            fprintf(stderr,"Invalid Guard Interval: %s\n",argv[i]);
+            exit(0);
+        }
+      } else if (strcmp(argv[i],"-tm")==0) {
+        i++;
+        switch(atoi(argv[i])) {
+          case 8:   TransmissionMode=TRANSMISSION_MODE_8K; break;
+          case 2:   TransmissionMode=TRANSMISSION_MODE_2K; break;
+          default:
+            fprintf(stderr,"Invalid Transmission Mode: %s\n",argv[i]);
+            exit(0);
+        }
+      } else if (strcmp(argv[i],"-bw")==0) {
+        i++;
+        switch(atoi(argv[i])) {
+          case 8:   bandWidth=BANDWIDTH_8_MHZ; break;
+          case 7:   bandWidth=BANDWIDTH_7_MHZ; break;
+          case 6:   bandWidth=BANDWIDTH_6_MHZ; break;
+          default:
+            fprintf(stderr,"Invalid DVB-T bandwidth: %s\n",argv[i]);
+            exit(0);
+        }
+      } else if (strcmp(argv[i],"-cr")==0) {
+        i++;
+        if (strcmp(argv[i],"AUTO")) {
+          HP_CodeRate=FEC_AUTO;
+        } else if (strcmp(argv[i],"1_2")) {
+          HP_CodeRate=FEC_1_2;
+        } else if (strcmp(argv[i],"2_3")) {
+          HP_CodeRate=FEC_2_3;
+        } else if (strcmp(argv[i],"3_4")) {
+          HP_CodeRate=FEC_3_4;
+        } else if (strcmp(argv[i],"5_6")) {
+          HP_CodeRate=FEC_5_6;
+        } else if (strcmp(argv[i],"7_8")) {
+          HP_CodeRate=FEC_7_8;
+        } else {
+          fprintf(stderr,"Invalid Code Rate: %s\n",argv[i]);
+          exit(0);
+        }
       } else if (strcmp(argv[i],"-D")==0) {
         i++;
         diseqc=atoi(argv[i]);
@@ -1102,7 +1174,7 @@ int main(int argc, char **argv)
 	  fprintf(stderr,"DiSEqC must be between 0 and 4\n");
           exit(-1);
         }
-      } else if (strcmp(argv[i],"-t")==0) {
+      } else if (strcmp(argv[i],"-tone")==0) {
 	i++;
 	if (atoi(argv[i])==0)
 	   tone = SEC_TONE_OFF;
@@ -1221,7 +1293,7 @@ int main(int argc, char **argv)
     set_vpid(0);
     set_ttpid(0);
 
-    if (tune_it(fd_frontend,fd_sec,freq,srate,pol,tone,specInv,diseqc) < 0) {
+    if (tune_it(fd_frontend,fd_sec,freq,srate,pol,tone,specInv,diseqc,modulation,HP_CodeRate,TransmissionMode,guardInterval,bandWidth) < 0) {
       return -1;
     }
   }
@@ -1233,7 +1305,7 @@ int main(int argc, char **argv)
     while ((t=get_unscanned(transponders))!=NULL) {
       free_pat_list();
       fprintf(stderr,"Scanning %d%c %d\n",t->freq,t->pol,t->srate);
-      tune_it(fd_frontend,fd_sec,t->freq,t->srate,t->pol,tone,specInv,0);
+      tune_it(fd_frontend,fd_sec,t->freq,t->srate,t->pol,tone,specInv,0,modulation,HP_CodeRate,TransmissionMode,guardInterval,bandWidth);
       printf("<transponder id=\"%d\" onid=\"%d\" freq=\"%05d\" srate=\"%d\" pos=\"%04x\" we_flag=\"%d\" polarity=\"%c\" modulation=\"%d\">\n",t->id,t->onid,t->freq,t->srate,t->pos,t->we_flag,t->pol,t->mod);
       t->scanned=1;
       scan_pat();
