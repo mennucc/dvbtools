@@ -1,26 +1,7 @@
 #ifndef _TUNE_H
 #define _TUNE_H
 
-#ifdef NEWSTRUCT
-  #include <linux/dvb/frontend.h>
-#else
-
-// The following defines make the "OLDSTRUCT" driver more compatible with NEWSTRUCT.
-
-  #include <ost/frontend.h>
-
-#define fe_status_t FrontendStatus
-#define fe_spectral_inversion_t SpectralInversion
-#define fe_modulation_t Modulation
-#define fe_code_rate_t CodeRate
-#define fe_transmit_mode_t TransmitMode
-#define fe_guard_interval_t GuardInterval
-#define fe_bandwidth_t BandWidth
-#define fe_sec_voltage_t SecVoltage
-#define dmx_pes_filter_params dmxPesFilterParams
-#define dmx_sct_filter_params dmxSctFilterParams
-#define dmx_pes_type_t dmxPesType_t
-#endif
+#include <linux/dvb/frontend.h>
 
 #include "dvb_defaults.h"
 
