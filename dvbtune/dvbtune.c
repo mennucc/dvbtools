@@ -1008,7 +1008,7 @@ int main(int argc, char **argv)
 		if (festatus & FE_HAS_LOCK) fprintf(stderr,"L|");
 		if (festatus & FE_HAS_CARRIER) fprintf(stderr,"C|");
 		if (festatus & FE_HAS_VITERBI) fprintf(stderr,"V|");
-		if (festatus & FE_HAS_SYNC) fprintf(stderr,"SY|");
+		if (festatus & FE_HAS_SYNC) fprintf(stderr,"SY");
 		fprintf(stderr,")\n");
                 sleep(1);
         }

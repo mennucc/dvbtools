@@ -270,7 +270,7 @@ int process_telnet() {
                   fprintf(stderr,"Mapping %d to %d\n",pid,pid2);
                 }
                 
-                if((fd[npids] = open(demuxdev[card],O_RDWR)) < 0){
+                if((fd[npids] = open(demuxdev[card],O_RDWR|O_NONBLOCK)) < 0){
                   fprintf(stderr,"FD %i: ",i);
                   perror("DEMUX DEVICE: ");
                 } else {
@@ -300,7 +300,7 @@ int process_telnet() {
             npids=0;
             i=4;
             while (cmd[i]==' ') i++;
-            freq=atoi(&cmd[i])*1000UL;
+            freq=atoi(&cmd[i]);
             while ((cmd[i]!=' ') && (cmd[i]!=0)) i++;
             if (cmd[i]!=0) {
               while (cmd[i]==' ') i++;
@@ -561,7 +561,7 @@ int main(int argc, char **argv)
 	}
       } else if (strcmp(argv[i],"-f")==0) {
         i++;
-        freq=atoi(argv[i])*1000UL;
+        freq=atoi(argv[i]);
       } else if (strcmp(argv[i],"-p")==0) {
         i++;
         if (argv[i][1]==0) {
@@ -818,11 +818,7 @@ int main(int argc, char **argv)
   if (signal(SIGALRM, SignalHandler) == SIG_IGN) signal(SIGALRM, SIG_IGN);
   alarm(ALARM_TIME);
 
-  if ( (freq>100000000)) {
-    if (open_fe(&fd_frontend)) {
-      i=tune_it(fd_frontend,freq,srate,0,tone,specInv,diseqc,modulation,HP_CodeRate,TransmissionMode,guardInterval,bandWidth, LP_CodeRate, hier);
-    }
-  } else if ((freq!=0) && (pol!=0) && (srate!=0)) {
+  if (freq!=0) {
     if (open_fe(&fd_frontend)) {
       fprintf(stderr,"Tuning to %ld Hz\n",freq);
       i=tune_it(fd_frontend,freq,srate,pol,tone,specInv,diseqc,modulation,HP_CodeRate,TransmissionMode,guardInterval,bandWidth, LP_CodeRate, hier);
@@ -846,7 +842,7 @@ int main(int argc, char **argv)
   fprintf(stderr,"dvbstream will stop after %d seconds (%d minutes)\n",secs,secs/60);
 
   for (i=0;i<npids;i++) {  
-    if((fd[i] = open(demuxdev[card],O_RDWR)) < 0){
+    if((fd[i] = open(demuxdev[card],O_RDWR|O_NONBLOCK)) < 0){
       fprintf(stderr,"FD %i: ",i);
       perror("DEMUX DEVICE: ");
       return -1;

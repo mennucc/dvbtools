@@ -28,6 +28,7 @@
 #include <unistd.h>
 #include <error.h>
 #include <errno.h>
+#include <time.h>
 
 #include <linux/dvb/dmx.h>
 #include <linux/dvb/frontend.h>
@@ -125,16 +126,10 @@ static int do_diseqc(int fd, unsigned char sat_no, int polv, int hi_lo)
 
 int check_status(int fd_frontend,int type, struct dvb_frontend_parameters* feparams,int hi_lo) {
   int32_t strength;
-  fe_status_t festatus;
-  struct dvb_frontend_event event;
   struct pollfd pfd[1];
-  int status;
+  int festatus, locks=0, ok=0;
+  time_t tm1, tm2;
 
-  while(1)  {
-	if (ioctl(fd_frontend, FE_GET_EVENT, &event) < 0)	//EMPTY THE EVENT QUEUE
-	break;
-  }
-  
   if (ioctl(fd_frontend,FE_SET_FRONTEND,feparams) < 0) {
     perror("ERROR tuning channel\n");
     return -1;
@@ -142,61 +137,61 @@ int check_status(int fd_frontend,int type, struct dvb_frontend_parameters* fepar
 
   pfd[0].fd = fd_frontend;
   pfd[0].events = POLLPRI;
-
-  event.status=0;
-  while (((event.status & FE_TIMEDOUT)==0) && ((event.status & FE_HAS_LOCK)==0)) {
-    fprintf(stderr,"polling....\n");
-    if (poll(pfd,1,10000) > 0){
+  
+  tm1 = tm2 = time((time_t*) NULL);
+  fprintf(stderr,"Getting frontend status\n");
+  while (!ok) {
+    festatus = 0;
+    if (poll(pfd,1,3000) > 0){
       if (pfd[0].revents & POLLPRI){
-        fprintf(stderr,"Getting frontend event\n");
-        if ((status = ioctl(fd_frontend, FE_GET_EVENT, &event)) < 0){
-	  if (errno != EOVERFLOW) {
-	    perror("FE_GET_EVENT");
-	    fprintf(stderr,"status = %d\n", status);
-	    fprintf(stderr,"errno = %d\n", errno);
-	    return -1;
-	  }
-	  else fprintf(stderr,"Overflow error, trying again (status = %d, errno = %d)", status, errno);
-        }
+        if(ioctl(fd_frontend,FE_READ_STATUS,&festatus) >= 0)
+          if(festatus & FE_HAS_LOCK)
+	    locks++;
       }
-      print_status(stderr,event.status);
     }
+    usleep(10000);
+    tm2 = time((time_t*) NULL);
+    if((festatus & FE_TIMEDOUT) || (locks >= 2) || (tm2 - tm1 >= 3))
+	    ok = 1;
   }
-
-  if (event.status & FE_HAS_LOCK) {
-      switch(type) {
+  
+  if (festatus & FE_HAS_LOCK) {
+      if(ioctl(fd_frontend,FE_GET_FRONTEND,feparams) >= 0) {
+        switch(type) {
          case FE_OFDM:
-           fprintf(stderr,"Event:  Frequency: %d\n",event.parameters.frequency);
+           fprintf(stderr,"Event:  Frequency: %d\n",feparams->frequency);
            break;
          case FE_QPSK:
-           fprintf(stderr,"Event:  Frequency: %d\n",(unsigned int)((event.parameters.frequency)+(hi_lo ? LOF2 : LOF1)));
-           fprintf(stderr,"        SymbolRate: %d\n",event.parameters.u.qpsk.symbol_rate);
-           fprintf(stderr,"        FEC_inner:  %d\n",event.parameters.u.qpsk.fec_inner);
+           fprintf(stderr,"Event:  Frequency: %d\n",(unsigned int)((feparams->frequency)+(hi_lo ? LOF2 : LOF1)));
+           fprintf(stderr,"        SymbolRate: %d\n",feparams->u.qpsk.symbol_rate);
+           fprintf(stderr,"        FEC_inner:  %d\n",feparams->u.qpsk.fec_inner);
            fprintf(stderr,"\n");
            break;
          case FE_QAM:
-           fprintf(stderr,"Event:  Frequency: %d\n",event.parameters.frequency);
-           fprintf(stderr,"        SymbolRate: %d\n",event.parameters.u.qpsk.symbol_rate);
-           fprintf(stderr,"        FEC_inner:  %d\n",event.parameters.u.qpsk.fec_inner);
+           fprintf(stderr,"Event:  Frequency: %d\n",feparams->frequency);
+           fprintf(stderr,"        SymbolRate: %d\n",feparams->u.qpsk.symbol_rate);
+           fprintf(stderr,"        FEC_inner:  %d\n",feparams->u.qpsk.fec_inner);
            break;
          default:
            break;
+        }
       }
-
       strength=0;
       if(ioctl(fd_frontend,FE_READ_BER,&strength) >= 0)
-      fprintf(stderr,"Bit error rate: %d\n",strength);
+        fprintf(stderr,"Bit error rate: %d\n",strength);
 
       strength=0;
       if(ioctl(fd_frontend,FE_READ_SIGNAL_STRENGTH,&strength) >= 0)
-      fprintf(stderr,"Signal strength: %d\n",strength);
+        fprintf(stderr,"Signal strength: %d\n",strength);
 
       strength=0;
       if(ioctl(fd_frontend,FE_READ_SNR,&strength) >= 0)
-      fprintf(stderr,"SNR: %d\n",strength);
+        fprintf(stderr,"SNR: %d\n",strength);
 
       festatus=0;
-      if(ioctl(fd_frontend,FE_READ_STATUS,&festatus) >= 0)
+      if(ioctl(fd_frontend,FE_READ_UNCORRECTED_BLOCKS,&strength) >= 0)
+        fprintf(stderr,"SNR: %d\n",strength);
+	
       print_status(stderr,festatus);
     } else {
     fprintf(stderr,"Not able to lock to the signal on the given frequency\n");
@@ -217,9 +212,9 @@ int tune_it(int fd_frontend, unsigned int freq, unsigned int srate, char pol, in
   
   fprintf(stderr,"Using DVB card \"%s\"\n",fe_info.name);
 
+  if (freq < 1000000) freq*=1000UL;
   switch(fe_info.type) {
     case FE_OFDM:
-      if (freq < 1000000) freq*=1000UL;
       feparams.frequency=freq;
       feparams.inversion=INVERSION_OFF;
       feparams.u.ofdm.bandwidth=bandwidth;
@@ -242,7 +237,7 @@ int tune_it(int fd_frontend, unsigned int freq, unsigned int srate, char pol, in
 	  hi_lo = 1;
       }
 
-	fprintf(stderr,"tuning DVB-S to Freq: %u, Pol:%c Srate=%d, 22kHz tone=%s, LNB: %d\n",feparams.frequency,pol,srate,tone == SEC_TONE_ON ? "on" : "off", diseqc);
+      fprintf(stderr,"tuning DVB-S to Freq: %u, Pol:%c Srate=%d, 22kHz tone=%s, LNB: %d\n",feparams.frequency,pol,srate,tone == SEC_TONE_ON ? "on" : "off", diseqc);
       feparams.inversion=specInv;
       feparams.u.qpsk.symbol_rate=srate;
       feparams.u.qpsk.fec_inner=FEC_AUTO;
