@@ -190,7 +190,7 @@ int check_status(int fd_frontend,int type, struct dvb_frontend_parameters* fepar
 
       festatus=0;
       if(ioctl(fd_frontend,FE_READ_UNCORRECTED_BLOCKS,&strength) >= 0)
-        fprintf(stderr,"SNR: %d\n",strength);
+        fprintf(stderr,"UNC: %d\n",strength);
 	
       print_status(stderr,festatus);
     } else {
