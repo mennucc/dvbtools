@@ -34,7 +34,11 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include <sys/ioctl.h>
 #include <fcntl.h>
 #include <unistd.h>
+#ifdef NEWSTRUCT
+#include <linux/dvb/dmx.h>
+#else
 #include <ost/dmx.h>
+#endif
 #include "tables.h"
 
 #define VERSION "0.1"
@@ -128,6 +132,23 @@ void set_line(mag_struct *mag, int line, unsigned char* data,int pnr) {
   }
 }
 
+#ifdef NEWSTRUCT
+void set_tt_filt(int fd,uint16_t tt_pid)
+{
+	struct dmx_pes_filter_params pesFilterParams;
+
+	pesFilterParams.pid     = tt_pid;
+	pesFilterParams.input   = DMX_IN_FRONTEND;
+	pesFilterParams.output  = DMX_OUT_TS_TAP;
+        pesFilterParams.pes_type = DMX_PES_OTHER;
+	pesFilterParams.flags   = DMX_IMMEDIATE_START;
+
+	if (ioctl(fd, DMX_SET_PES_FILTER, &pesFilterParams) < 0)  {
+                fprintf(stderr,"FILTER %i: ",tt_pid);
+		perror("DMX SET PES FILTER");
+        }
+}
+#else
 void set_tt_filt(int fd,uint16_t tt_pid)
 {
 	struct dmxPesFilterParams pesFilterParams;
@@ -135,14 +156,15 @@ void set_tt_filt(int fd,uint16_t tt_pid)
 	pesFilterParams.pid     = tt_pid;
 	pesFilterParams.input   = DMX_IN_FRONTEND;
 	pesFilterParams.output  = DMX_OUT_TS_TAP;
-        pesFilterParams.pesType = DMX_PES_TELETEXT;
-	pesFilterParams.flags   = DMX_IMMEDIATE_START|DMX_ONESHOT;
+        pesFilterParams.pesType = DMX_PES_OTHER;
+	pesFilterParams.flags   = DMX_IMMEDIATE_START;
 
 	if (ioctl(fd, DMX_SET_PES_FILTER, &pesFilterParams) < 0)  {
                 fprintf(stderr,"FILTER %i: ",tt_pid);
 		perror("DMX SET PES FILTER");
         }
 }
+#endif
 
 int main(int argc, char **argv)
 {
