@@ -3,7 +3,7 @@
 
 #include <sys/socket.h>
 
-enum {RTP_PS,RTP_TS};
+enum {RTP_PS,RTP_TS,RTP_NONE,MAP_TS};
 
 struct rtpbits {
   unsigned int v:2;           /* version: 2 */

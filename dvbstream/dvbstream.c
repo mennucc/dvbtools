@@ -23,6 +23,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
     
 */
 
+
 // Linux includes:
 #include <stdio.h>
 #include <stdlib.h>
@@ -133,12 +134,19 @@ long getmsec() {
 }
 
 // There seems to be a limit of 8 simultaneous filters in the driver
-#define MAX_CHANNELS 8
+#ifdef NEWSTRUCT
+  #define MAX_CHANNELS 16
+#else
+  #define MAX_CHANNELS 8
+#endif
+
+
 
 void set_ts_filt(int fd,uint16_t pid, dmx_pes_type_t pestype)
 {
   struct dmx_pes_filter_params pesFilterParams;
 
+  fprintf(stderr,"Setting filter for PID %d\n",pid);
   pesFilterParams.pid     = pid;
   pesFilterParams.input   = DMX_IN_FRONTEND;
   pesFilterParams.output  = DMX_OUT_TS_TAP;
@@ -189,6 +197,7 @@ typedef enum {STREAM_ON,STREAM_OFF} state_t;
   int npids = 0;
   int fd[MAX_CHANNELS];
   int to_stdout = 0; /* to stdout instead of rtp stream */
+
   /* rtp */
   struct rtpheader hdr;
   struct sockaddr_in sOut;
@@ -405,6 +414,19 @@ void my_ts_to_ps( uint8_t* buf, uint16_t pida, uint16_t pidv)
 }
 
 
+typedef struct {
+  char *filename;
+  int fd;
+  int pids[MAX_CHANNELS];
+  int num;
+} pids_map_t;
+
+pids_map_t *pids_map;
+int map_cnt;
+
+
+
+
 int main(int argc, char **argv)
 {
   //  state_t state=STREAM_OFF;
@@ -420,13 +442,19 @@ int main(int argc, char **argv)
   char* ch;
   dmx_pes_type_t pestype;
   int bytes_read;
+  int do_analyse=0;
   unsigned char* free_bytes;
   int output_type=RTP_TS;
+  int64_t counts[8192];
+  double f;
 
   /* Output: {uni,multi,broad}cast socket */
   char ipOut[20];
   int portOut;
   int ttl;
+  
+  pids_map = NULL;
+  map_cnt = 0;
 
   fprintf(stderr,"dvbstream v0.4pre3 - (C) Dave Chapman 2001\n");
   fprintf(stderr,"Released under the GPL.\n");
@@ -436,6 +464,7 @@ int main(int argc, char **argv)
   for (i=0;i<8192;i++) {
     hi_mappids[i]=(i >> 8);
     lo_mappids[i]=(i&0xff);
+    counts[i]=0;
   }
 
   /* Set default IP and port */
@@ -447,6 +476,7 @@ int main(int argc, char **argv)
     fprintf(stderr,"-i          IP multicast address\n");
     fprintf(stderr,"-r          IP multicast port\n");
     fprintf(stderr,"-o          Stream to stdout instead of network\n");
+    fprintf(stderr,"-o:file.ts  Stream to named file instead of network\n");
     fprintf(stderr,"-n secs     Stop after secs seconds\n");
     fprintf(stderr,"-ps         Convert stream to Program Stream format (needs exactly 2 pids)\n");
     fprintf(stderr,"-v vpid     Decode video PID (full cards only)\n");
@@ -466,6 +496,8 @@ int main(int argc, char **argv)
     fprintf(stderr,"-bw N       DVB-T bandwidth (Mhz) - N=6%s, 7%s or 8%s\n",(BANDWIDTH_DEFAULT==BANDWIDTH_6_MHZ ? " (default)" : ""),(BANDWIDTH_DEFAULT==BANDWIDTH_7_MHZ ? " (default)" : ""),(BANDWIDTH_DEFAULT==BANDWIDTH_8_MHZ ? " (default)" : ""));
     fprintf(stderr,"-tm N       DVB-T transmission mode - N=2%s or 8%s\n",(TRANSMISSION_MODE_DEFAULT==TRANSMISSION_MODE_2K ? " (default)" : ""),(TRANSMISSION_MODE_DEFAULT==TRANSMISSION_MODE_8K ? " (default)" : ""));
 
+    fprintf(stderr,"\n-analyse    Perform a simple analysis of the bitrates of the PIDs in the transport stream\n");
+
     fprintf(stderr,"\n");
     fprintf(stderr,"NOTE: Use pid1=8192 to broadcast whole TS stream from a budget card\n");
     return(-1);
@@ -475,6 +507,10 @@ int main(int argc, char **argv)
     for (i=1;i<argc;i++) {
       if (strcmp(argv[i],"-ps")==0) {
         output_type=RTP_PS;
+      } else if (strcmp(argv[i],"-analyse")==0) {
+        do_analyse=1;
+        output_type=RTP_NONE;
+        if (secs==0) { secs=10; }
       } else if (strcmp(argv[i],"-i")==0) {
         i++;
         strcpy(ipOut,argv[i]);
@@ -502,8 +538,7 @@ int main(int argc, char **argv)
       {
         i++;
         diseqc=atoi(argv[i]);
-	if(diseqc < 0 || diseqc > 4)
-		diseqc = 0;	
+        if(diseqc < 0 || diseqc > 4) diseqc = 0;
       } 
       else if (strcmp(argv[i],"-o")==0) {
         to_stdout = 1;
@@ -582,37 +617,93 @@ int main(int argc, char **argv)
           fprintf(stderr,"Invalid Code Rate: %s\n",argv[i]);
           exit(0);
         }
-      } else {
-        if ((ch=(char*)strstr(argv[i],":"))!=NULL) {
-          pid2=atoi(&ch[1]);
-          ch[0]=0;
-        } else {
-          pid2=-1;
-        }
-        pid=atoi(argv[i]);
-        if (pid) {
-          if (npids == MAX_CHANNELS) {
-            fprintf(stderr,"\nSorry, you can only set up to 8 filters.\n\n");
-            return(-1);
-          } else {
-            pestypes[npids]=pestype;
-            pestype=DMX_PES_OTHER;
-            pids[npids++]=pid;
-            if (pid2!=-1) {
-              hi_mappids[pid]=pid2>>8;
-              lo_mappids[pid]=pid2&0xff;
-              fprintf(stderr,"Mapping %d to %d\n",pid,pid2);
+      } else if (strstr(argv[i], "-o:")==argv[i]) {
+        if (strlen(argv[i]) > 3) {
+          int pid_cnt = 0, pid, j;
+
+          map_cnt++;
+          pids_map = (pids_map_t*) realloc(pids_map, sizeof(pids_map_t) * map_cnt);
+          for(j=0; j < MAX_CHANNELS; j++) pids_map[map_cnt-1].pids[j] = -1;
+          pids_map[map_cnt-1].filename = (char *) malloc(strlen(argv[i]) - 2);
+          strcpy(pids_map[map_cnt-1].filename, &argv[i][3]);
+          i++;
+
+          while(i < argc) {
+            int found;
+            if (sscanf(argv[i], "%d", &pid) == 0) {
+              i--;
+              break;
             }
-         }
+
+            // block for the map
+            found = 0;
+            for (j=0;j<MAX_CHANNELS;j++) {
+              if(pids_map[map_cnt-1].pids[j] == pid) found = 1;
+            }
+            if (found == 0) {
+              pids_map[map_cnt-1].pids[pid_cnt] = pid;
+              pid_cnt++;
+            }
+
+            // block for the list of pids to demux
+            found = 0;
+            for (j=0;j<npids;j++) {
+              if(pids[j] == pid) found = 1;
+            }
+            if (found==0) {
+              pestypes[npids] = DMX_PES_OTHER;
+              pids[npids++] = pid;
+            }
+            i++;
+          }
+
+          if (pid_cnt > 0) {
+             FILE *f;
+             f = fopen(pids_map[map_cnt-1].filename, "w+b");
+             if (f != NULL) {
+               pids_map[map_cnt-1].fd = fileno(f);
+               make_nonblock(pids_map[map_cnt-1].fd);
+               fprintf(stderr, "Open file %s\n", pids_map[map_cnt-1].filename);
+             } else {
+               pids_map[map_cnt-1].fd = -1;
+               fprintf(stderr, "Couldn't open file %s, errno:%d\n", pids_map[map_cnt-1].filename, errno);
+             }
+	   }
+           output_type = MAP_TS;
+          }
+        } else {
+          if ((ch=(char*)strstr(argv[i],":"))!=NULL) {
+            pid2=atoi(&ch[1]);
+            ch[0]=0;
+          } else {
+            pid2=-1;
+          }
+          pid=atoi(argv[i]);
+          if (pid) {
+            if (npids == MAX_CHANNELS) {
+              fprintf(stderr,"\nSorry, you can only set up to %d filters.\n\n",MAX_CHANNELS);
+              return(-1);
+            } else {
+              pestypes[npids]=pestype;
+              pestype=DMX_PES_OTHER;
+              pids[npids++]=pid;
+              if (pid2!=-1) {
+                hi_mappids[pid]=pid2>>8;
+                lo_mappids[pid]=pid2&0xff;
+                fprintf(stderr,"Mapping %d to %d\n",pid,pid2);
+              }
+            }
+          }
         }
       }
     }
-  }
 
   if ((output_type==RTP_PS) && (npids!=2)) {
-     fprintf(stderr,"ERROR: PS requires exactly two PIDS - video and audio.\n");
-     exit;
- }
+    fprintf(stderr,"ERROR: PS requires exactly two PIDS - video and audio.\n");
+    exit;
+  }
+
+
   if (signal(SIGHUP, SignalHandler) == SIG_IGN) signal(SIGHUP, SIG_IGN);
   if (signal(SIGINT, SignalHandler) == SIG_IGN) signal(SIGINT, SIG_IGN);
   if (signal(SIGTERM, SignalHandler) == SIG_IGN) signal(SIGTERM, SIG_IGN);
@@ -646,20 +737,24 @@ int main(int argc, char **argv)
   /* Now we set the filters */
   for (i=0;i<npids;i++) set_ts_filt(fd[i],pids[i],pestypes[i]);
 
-  if (to_stdout) {
-    fprintf(stderr,"Output to stdout\n");
-  }
-  else {
-    ttl = 2;
-    fprintf(stderr,"Using %s:%d:%d\n",ipOut,portOut,ttl);
+  if (do_analyse) {
+    fprintf(stderr,"Analysing PIDS\n");
+  } else {
+    if (to_stdout) {
+      fprintf(stderr,"Output to stdout\n");
+    }
+    else {
+      ttl = 2;
+      fprintf(stderr,"Using %s:%d:%d\n",ipOut,portOut,ttl);
 
-    /* Init RTP */
-    socketOut = makesocket(ipOut,portOut,ttl,&sOut);
-    #warning WHAT SHOULD THE PAYLOAD TYPE BE FOR "MPEG-2 PS" ?
-    initrtp(&hdr,(output_type==RTP_TS ? 33 : 34));
-    fprintf(stderr,"version=%X\n",hdr.b.v);
+      /* Init RTP */
+      socketOut = makesocket(ipOut,portOut,ttl,&sOut);
+      #warning WHAT SHOULD THE PAYLOAD TYPE BE FOR "MPEG-2 PS" ?
+      initrtp(&hdr,(output_type==RTP_TS ? 33 : 34));
+      fprintf(stderr,"version=%X\n",hdr.b.v);
+    }
+    fprintf(stderr,"Streaming %d stream%s\n",npids,(npids==1 ? "" : "s"));
   }
-  fprintf(stderr,"Streaming %d stream%s\n",npids,(npids==1 ? "" : "s"));
 
   if (output_type==RTP_PS) {
     init_ipack(&pa, IPACKS,my_write_out, 1);
@@ -740,10 +835,37 @@ int main(int argc, char **argv)
         }
         count++;
       }
-    } else {
+    } else if (output_type==RTP_PS) {
        if (read(fd_dvr,buf,TS_SIZE) > 0) {
          my_ts_to_ps((uint8_t*)buf, pids[0], pids[1]);
        }
+    } else if(output_type==MAP_TS) {
+       if(read(fd_dvr, buf, TS_SIZE) > 0) {
+         if(buf[0] == 0x47) {
+           int pid, i, j;
+
+           pid = ((buf[1] & 0x1f) << 8) | buf[2];
+           if (pids_map != NULL)        {
+             for (i = 0; i < map_cnt; i++) {
+               for (j = 0; j < MAX_CHANNELS; j++) {
+                 if (pids_map[i].pids[j] == pid) {
+                   errno = 0;
+                   write(pids_map[i].fd, buf, TS_SIZE);
+                 }
+               }
+             }
+           }
+         } else {
+           fprintf(stderr, "NON 0X47\n");
+         }
+       }
+    } else {
+      if (do_analyse) {
+        if (read(fd_dvr,buf,TS_SIZE) > 0) {
+          pid=((buf[1]&0x1f) << 8) | (buf[2]);
+          counts[pid]++;
+        }
+      }
     }
   }
 
@@ -759,5 +881,19 @@ int main(int argc, char **argv)
   close(fd_dvr);
   close(fd_frontend);
   if (fd_sec) close(fd_sec);
+
+  if (do_analyse) {
+    for (i=0;i<8192;i++) {
+      if (counts[i]) {
+        f=(counts[i]*184.0*8.0)/(secs*1024.0*1024.0);
+        if (f >= 1.0) {
+          fprintf(stdout,"%d,%.3f Mbit/s\n",i,f);
+        } else {
+          fprintf(stdout,"%d,%.0f kbit/s\n",i,f*1024);
+        }
+      }
+    }
+  }
+
   return(0);
 }
