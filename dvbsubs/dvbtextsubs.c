@@ -586,6 +586,7 @@ int main(int argc, char** argv) {
       } else if (strcmp(argv[i],"-apts")==0) {
         use_apts=1;
       } else if (strcmp(argv[i],"-apid")==0) {
+        i++;
         apid=atoi(argv[i]);
       } else if (strcmp(argv[i],"-pts")==0) {
         i++;
