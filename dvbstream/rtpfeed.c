@@ -26,6 +26,7 @@
 
 // Linux includes:
 #include <stdio.h>
+#include <stdlib.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
@@ -33,6 +34,7 @@
 #include <sys/ioctl.h>
 #include <fcntl.h>
 #include <getopt.h>
+#include <unistd.h>
 
 #include "rtp.h"
 
@@ -77,7 +79,7 @@ void set_ts_filt(int fd,uint16_t pid, int type)
 }// end set_ts_filt
 
 
-main(int argc, char *argv[]) {
+int main(int argc, char *argv[]) {
 
 // filedescriptors for video, audio and dvr-device
   int fda,fdv;
@@ -87,19 +89,12 @@ main(int argc, char *argv[]) {
   uint16_t vpid = 0;
   uint16_t apid = 0;
 
-  struct dmxPesFilterParams pesFilterParams;
-
-
   struct sockaddr_in si;
   int socketIn;
 
   char *ip = "224.0.1.2";
   int port = 5004;
 
-  char tmp[50];
-  register int i, s, len;
-  struct sockaddr_un saun;
-  
 // process command-line arguments
   static struct option long_options[]={
     {"group", required_argument, NULL, 'g'},
@@ -132,7 +127,7 @@ main(int argc, char *argv[]) {
       apid = atoi(optarg);
       break;
     case 'h':
-      fprintf(stderr,"Usage: rtpfeed [-g group] [-p port] [-v video PID] [-a audio PID] \n",argv[0]);
+      fprintf(stderr,"Usage: %s [-g group] [-p port] [-v video PID] [-a audio PID] \n",argv[0]);
       exit(1);
     }// end switch
   }// end while
@@ -167,4 +162,5 @@ main(int argc, char *argv[]) {
   dumprtp(socketIn, fd_dvr);
 
   close(socketIn);
+  return(0);
 }

@@ -1,4 +1,4 @@
-#ifdef _TUNE_H
+#ifndef _TUNE_H
 #define _TUNE_H
 
 int open_fe(int* fd_frontend,int* fd_sec);

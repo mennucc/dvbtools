@@ -21,10 +21,12 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <resolv.h>
+#include <unistd.h>
 
 #include "rtp.h"
 
@@ -39,17 +41,13 @@ void dumprtp(int socket) {
   }
 }
 
-main(int argc, char *argv[]) {
+int main(int argc, char *argv[]) {
 
   struct sockaddr_in si;
   int socketIn;
 
   char *ip;
   int port;
-
-  char tmp[50];
-  register int i, s, len;
-  struct sockaddr_un saun;
 
   fprintf(stderr,"Rtp dump\n");
 
@@ -72,4 +70,5 @@ main(int argc, char *argv[]) {
   dumprtp(socketIn);
 
   close(socketIn);
+  return(0);
 }

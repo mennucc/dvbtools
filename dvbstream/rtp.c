@@ -92,7 +92,7 @@ int getrtp2(int fd, struct rtpheader *rh, char** data, int* lengthData) {
     exit(2);
   }
   if (lengthPacket<12) {
-    fprintf(stderr,"packet too small (%d) to be an rtp frame (>12bytes)\n");
+    fprintf(stderr,"packet too small (%d) to be an rtp frame (>12bytes)\n",lengthPacket);
     exit(3);
   }
   rh->b.v  = (unsigned int) ((buf[0]>>6)&0x03);
@@ -156,13 +156,13 @@ int getrtp(int fd, struct rtpheader *rh, char** data, int* lengthData) {
   static char buf[1600];
   int headerSize;
   int lengthPacket;
-  int i;
 
   lengthPacket=recv(fd,buf,1590,0);
   headerSize = 3;
   *lengthData = lengthPacket - headerSize;
   *data = (char*) buf + headerSize;
   fprintf(stderr,"[%d] %02x %x\n",lengthPacket,buf[8],buf[0]);
+  return(0);
 }
 
 /* create a sender socket. */

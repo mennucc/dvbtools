@@ -41,13 +41,15 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include <netinet/in.h>
 #include <netdb.h>
 
+// DVB includes:
+#include <ost/dmx.h>
+#include <ost/frontend.h>
+
 #include "rtp.h"
 #include "mpegtools/transform.h"
 #include "mpegtools/remux.h"
 
-// DVB includes:
-#include <ost/dmx.h>
-#include <ost/frontend.h>
+#include "tune.h"
 
 // The default telnet port.
 #define DEFAULT_PORT 12345
@@ -231,7 +233,7 @@ int process_telnet() {
             else if ((cmd[3]=='T') || (cmd[3]=='t')) pestype=DMX_PES_TELETEXT;
             else { pestype=DMX_PES_OTHER; i=3; }
             while (cmd[i]==' ') i++;
-            if (ch=(char*)strstr(&cmd[i],":")) {
+            if ((ch=(char*)strstr(&cmd[i],":"))!=NULL) {
               pid2=atoi(&ch[1]);
               ch[0]=0;
             } else {
@@ -292,7 +294,7 @@ int process_telnet() {
                 while (cmd[i]==' ') i++;
                 srate=atoi(&cmd[i])*1000UL;
                 if (open_fe(&fd_frontend,&fd_sec)) {
-                  fprintf(stderr,"Tuning to %d,%d,%c\n",freq,srate,pol);
+                  fprintf(stderr,"Tuning to %ld,%ld,%c\n",freq,srate,pol);
                   tune_it(fd_frontend,fd_sec,freq,srate,pol);
                   close(fd_frontend);
                   close(fd_sec);
@@ -306,7 +308,7 @@ int process_telnet() {
         }
       }
     }
-
+    return(0);
 }
 
 
@@ -380,11 +382,10 @@ void my_ts_to_ps( uint8_t* buf, uint16_t pida, uint16_t pidv)
 
 int main(int argc, char **argv)
 {
-  state_t state=STREAM_OFF;
+  //  state_t state=STREAM_OFF;
   unsigned short int port=DEFAULT_PORT;
   int fd_dvr;
   int i;
-  unsigned char c;
   unsigned char buf[MTU];
   struct pollfd pfds[2];  // DVR device and Telnet connection
   unsigned int secs = 0;
@@ -394,7 +395,6 @@ int main(int argc, char **argv)
   int count;
   char* ch;
   dmxPesType_t pestype;
-  int bytes_filled;
   int bytes_read;
   unsigned char* free_bytes;
   int output_type=RTP_TS;
@@ -466,7 +466,7 @@ int main(int argc, char **argv)
       } else if (strcmp(argv[i],"-t")==0) {
         pestype=DMX_PES_TELETEXT;
       } else {
-        if (ch=(char*)strstr(argv[i],":")) {
+        if ((ch=(char*)strstr(argv[i],":"))!=NULL) {
           pid2=atoi(&ch[1]);
           ch[0]=0;
         } else {
