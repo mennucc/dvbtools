@@ -440,7 +440,9 @@ int map_cnt;
 int main(int argc, char **argv)
 {
   //  state_t state=STREAM_OFF;
+#ifdef ENABLE_TELNET
   unsigned short int port=DEFAULT_PORT;
+#endif
   int fd_dvr;
   int i,j;
   unsigned char buf[MTU];
@@ -644,6 +646,7 @@ int main(int argc, char **argv)
           pids_map[map_cnt-1].end_time=atoi(argv[i])*60;
         } else {
           end_time=atoi(argv[i])*60;
+          secs=end_time;
         }
       } else if (strstr(argv[i], "-o:")==argv[i]) {
         if (strlen(argv[i]) > 3) {
@@ -735,11 +738,12 @@ int main(int argc, char **argv)
     }
   } else if ((freq!=0) && (pol!=0) && (srate!=0)) {
     if (open_fe(&fd_frontend,&fd_sec)) {
+      fprintf(stderr,"Tuning to %ld Hz\n",freq);
       i=tune_it(fd_frontend,fd_sec,freq,srate,pol,tone,specInv,diseqc,modulation,HP_CodeRate,TransmissionMode,guardInterval,bandWidth);
     }
   }
 
-  if (i<0) { exit(i); }
+  //  if (i<0) { exit(i); }
 
   for (i=0;i<map_cnt;i++) {
     if ((secs==-1) || (secs < pids_map[i].end_time)) { secs=pids_map[i].end_time; }
@@ -747,6 +751,8 @@ int main(int argc, char **argv)
     for (j=0;j<MAX_CHANNELS;j++) { if (pids_map[i].pids[j]!=-1) fprintf(stderr," %d",pids_map[i].pids[j]); }
     fprintf(stderr,"\n");
   }
+  
+  fprintf(stderr,"dvbstream will stop after %d seconds (%d minutes)\n",secs,secs/60);
 
   for (i=0;i<npids;i++) {  
     if((fd[i] = open(demuxdev[card],O_RDWR)) < 0){
@@ -795,6 +801,7 @@ int main(int argc, char **argv)
   /* Read packets */
   free_bytes = buf;
 
+#ifdef ENABLE_TELNET
   /* Setup socket to accept input from a client */
   gethostname(hostname, sizeof(hostname));
   if ((hp = gethostbyname(hostname)) == NULL) {
@@ -821,6 +828,7 @@ int main(int argc, char **argv)
     perror("server: listen");
     exit(1);
   }
+#endif
 
   connectionOpen=0;
   ns=-1;
