@@ -145,12 +145,6 @@ int main(int argc, char** argv) {
       }
 
       if (counter!=continuity_counter) {
-        n=0;
-        c=counter;
-        while (c!=continuity_counter) {
-          c++; c%=16;
-          n++;
-        }
         n=(continuity_counter+16-counter)%16;
            
         fprintf(stderr,"TS: missing %d packet(s), packet=%d, expecting %02x, received %02x\n",n,packet,counter,continuity_counter);
