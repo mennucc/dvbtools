@@ -53,20 +53,27 @@ struct diseqc_cmd {
 };
 
 static int diseqc_send_msg(int fd, fe_sec_voltage_t v, struct diseqc_cmd *cmd,
-		     fe_sec_tone_mode_t t, fe_sec_mini_cmd_t b)
+		     fe_sec_tone_mode_t t, unsigned char sat_no)
 {
    if(ioctl(fd, FE_SET_TONE, SEC_TONE_OFF) < 0)
    	return -1;
    if(ioctl(fd, FE_SET_VOLTAGE, v) < 0)
    	return -1;
    usleep(15 * 1000);
-   if(ioctl(fd, FE_DISEQC_SEND_MASTER_CMD, &cmd->cmd) < 0)
+   if(sat_no >= 1 && sat_no <= 4)	//1.x compatible equipment
+   {
+    if(ioctl(fd, FE_DISEQC_SEND_MASTER_CMD, &cmd->cmd) < 0)
    	return -1;
-   usleep(cmd->wait * 1000);
-   usleep(15 * 1000);
-   if(ioctl(fd, FE_DISEQC_SEND_BURST, b) < 0)
+    usleep(cmd->wait * 1000);
+    usleep(15 * 1000);
+   }
+   else	//A or B simple diseqc
+   {
+    fprintf(stderr, "SETTING SIMPLE %c BURST\n", sat_no);
+    if(ioctl(fd, FE_DISEQC_SEND_BURST, (sat_no == 'B' ? SEC_MINI_B : SEC_MINI_A)) < 0)
    	return -1;
-   usleep(15 * 1000);
+    usleep(15 * 1000);
+   }
    if(ioctl(fd, FE_SET_TONE, t) < 0)
    	return -1;
 
@@ -77,19 +84,43 @@ static int diseqc_send_msg(int fd, fe_sec_voltage_t v, struct diseqc_cmd *cmd,
  * specification is available from http://www.eutelsat.com/ 
  */
 
-static int do_diseqc(int secfd, int sat_no, int polv, int hi_lo)
+static int do_diseqc(int fd, unsigned char sat_no, int polv, int hi_lo)
 {
-   struct diseqc_cmd cmd =  { {{0xe0, 0x10, 0x38, 0xf0, 0x00, 0x00}, 4}, 0 };
+    struct diseqc_cmd cmd =  { {{0xe0, 0x10, 0x38, 0xf0, 0x00, 0x00}, 4}, 0 };
 
-   /* param: high nibble: reset bits, low nibble set bits,
-    * bits are: option, position, polarizaion, band
-    */
-   cmd.cmd.msg[3] =
-       0xf0 | (((sat_no * 4) & 0x0f) | (hi_lo ? 1 : 0) | (polv ? 0 : 2));
+    if(sat_no != 0)
+    {
+	unsigned char d = sat_no;
 
-   return diseqc_send_msg(secfd, polv ? SEC_VOLTAGE_13 : SEC_VOLTAGE_18,
-		   &cmd, hi_lo ? SEC_TONE_ON : SEC_TONE_OFF,
-		   (sat_no / 4) % 2 ? SEC_MINI_B : SEC_MINI_A);
+	/* param: high nibble: reset bits, low nibble set bits,
+	* bits are: option, position, polarizaion, band
+	*/
+	sat_no--;
+	cmd.cmd.msg[3] =
+    	    0xf0 | (((sat_no * 4) & 0x0f) | (polv ? 0 : 2) | (hi_lo ? 1 : 0));
+
+	return diseqc_send_msg(fd, 
+		    polv ? SEC_VOLTAGE_13 : SEC_VOLTAGE_18,
+		    &cmd, 
+		    hi_lo ? SEC_TONE_ON : SEC_TONE_OFF, 
+		    d);
+    }
+    else 	//only tone and voltage
+    {
+	fe_sec_voltage_t voltage;
+	
+	fprintf(stderr, "Setting only tone %s and voltage %dV\n", (hi_lo ? "ON" : "OFF"), (polv ? 13 : 18));
+	
+	if(ioctl(fd, FE_SET_VOLTAGE, (polv ? SEC_VOLTAGE_13 : SEC_VOLTAGE_18)) < 0)
+   	    return -1;
+	    
+	if(ioctl(fd, FE_SET_TONE, (hi_lo ? SEC_TONE_ON : SEC_TONE_OFF)) < 0)
+   	    return -1;
+	
+	usleep(15 * 1000);
+	
+	return 0;
+    }
 }
 
 int check_status(int fd_frontend,int type, struct dvb_frontend_parameters* feparams,int hi_lo) {
@@ -174,7 +205,7 @@ int check_status(int fd_frontend,int type, struct dvb_frontend_parameters* fepar
   return 0;
 }
 
-int tune_it(int fd_frontend, unsigned int freq, unsigned int srate, char pol, int tone, fe_spectral_inversion_t specInv, unsigned int diseqc,fe_modulation_t modulation,fe_code_rate_t HP_CodeRate,fe_transmit_mode_t TransmissionMode,fe_guard_interval_t guardInterval, fe_bandwidth_t bandwidth) {
+int tune_it(int fd_frontend, unsigned int freq, unsigned int srate, char pol, int tone, fe_spectral_inversion_t specInv, unsigned char diseqc,fe_modulation_t modulation,fe_code_rate_t HP_CodeRate,fe_transmit_mode_t TransmissionMode,fe_guard_interval_t guardInterval, fe_bandwidth_t bandwidth) {
   int res, hi_lo, dfd;
   struct dvb_frontend_parameters feparams;
   struct dvb_frontend_info fe_info;
@@ -198,7 +229,8 @@ int tune_it(int fd_frontend, unsigned int freq, unsigned int srate, char pol, in
       feparams.u.ofdm.transmission_mode=TransmissionMode;
       feparams.u.ofdm.guard_interval=guardInterval;
       feparams.u.ofdm.hierarchy_information=HIERARCHY_DEFAULT;
-      fprintf(stderr,"tuning DVB-T (%s) to %d Hz, Bandwidth: %d\n",DVB_T_LOCATION,freq, bandwidth);
+      fprintf(stderr,"tuning DVB-T (%s) to %d Hz, Bandwidth: %d\n",DVB_T_LOCATION,freq, 
+	bandwidth==BANDWIDTH_8_MHZ ? 8 : (bandwidth==BANDWIDTH_7_MHZ ? 7 : 6));
       break;
     case FE_QPSK:
     	pol = toupper(pol);

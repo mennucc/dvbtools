@@ -89,11 +89,10 @@ fe_transmit_mode_t TransmissionMode=TRANSMISSION_MODE_DEFAULT;
 fe_bandwidth_t bandWidth=BANDWIDTH_DEFAULT;
 fe_guard_interval_t guardInterval=GUARD_INTERVAL_DEFAULT;
 fe_code_rate_t HP_CodeRate=HP_CODERATE_DEFAULT;
-unsigned int diseqc=0;
+unsigned char diseqc=0;
 char pol=0;
 
 int open_fe(int* fd_frontend) {
-
     if((*fd_frontend = open(frontenddev[card],O_RDWR | O_NONBLOCK)) < 0){
         perror("FRONTEND DEVICE: ");
         return -1;
@@ -474,7 +473,7 @@ int main(int argc, char **argv)
 
     fprintf(stderr,"\nAdvanced tuning options:\n\n");
     fprintf(stderr,"-c [0-3]    Use DVB card #[0-3]\n");
-    fprintf(stderr,"-D [0-4]    DiSEqC command (0=none)\n\n");
+    fprintf(stderr,"-D [0-4AB]  DiSEqC command (0=none)\n\n");
     fprintf(stderr,"-I [0|1|2]  0=Spectrum Inversion off, 1=Spectrum Inversion on, 2=auto\n");
     fprintf(stderr,"-qam X      DVB-T modulation - 16%s, 32%s, 64%s, 128%s or 256%s\n",(CONSTELLATION_DEFAULT==QAM_16 ? " (default)" : ""),(CONSTELLATION_DEFAULT==QAM_32 ? " (default)" : ""),(CONSTELLATION_DEFAULT==QAM_64 ? " (default)" : ""),(CONSTELLATION_DEFAULT==QAM_128 ? " (default)" : ""),(CONSTELLATION_DEFAULT==QAM_256 ? " (default)" : ""));
     fprintf(stderr,"-gi N       DVB-T guard interval 1_N (N=32%s, 16%s, 8%s or 4%s)\n",(GUARD_INTERVAL_DEFAULT==GUARD_INTERVAL_1_32 ? " (default)" : ""),(GUARD_INTERVAL_DEFAULT==GUARD_INTERVAL_1_16 ? " (default)" : ""),(GUARD_INTERVAL_DEFAULT==GUARD_INTERVAL_1_8 ? " (default)" : ""),(GUARD_INTERVAL_DEFAULT==GUARD_INTERVAL_1_4 ? " (default)" : ""));
@@ -523,9 +522,18 @@ int main(int argc, char **argv)
       else if (strcmp(argv[i],"-D")==0) 
       {
         i++;
-        diseqc=atoi(argv[i]);
-        if(diseqc < 1 || diseqc > 4) diseqc = 1;
-	diseqc--;
+	diseqc = argv[i][0];
+	if(toupper(diseqc) == 'A')
+	    diseqc = 'A';
+	else if(toupper(diseqc) == 'B')
+	    diseqc = 'B';
+	else if(diseqc >= '0' && diseqc <= '4') {
+	    diseqc=diseqc - '0';
+	}
+	else {
+	        fprintf(stderr,"DiSEqC must be between 0 and 4 or A | B\n");
+	        exit(-1);
+	}
       } else if (strcmp(argv[i],"-I")==0) {
         i++;
         if (atoi(argv[i])==0)
