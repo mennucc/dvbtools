@@ -178,7 +178,6 @@ int tune_it(int fd_frontend, unsigned int freq, unsigned int srate, char pol, in
   int res, hi_lo, dfd;
   struct dvb_frontend_parameters feparams;
   struct dvb_frontend_info fe_info;
-  fe_sec_voltage_t voltage;
 
   if ( (res = ioctl(fd_frontend,FE_GET_INFO, &fe_info) < 0)){
      perror("FE_GET_INFO: ");
