@@ -56,13 +56,14 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 #define VERSION "0.3"
 #define USAGE "\n\
-USAGE: dvbtextsubs pid pageno\n\
-or     dvbtextsubs -vdr pageno\n\n\
+USAGE: dvbtextsubs [options] pid pageno\n\
+or     dvbtextsubs [options] -vdr pageno\n\n\
 The DVB stream must be piped to dvbtextsubs.  e.g.:\n\n\
-cat 0*.vdr | dvbtextsubs > output.xml\n\n\
+    cat 0*.vdr | dvbtextsubs -vdr 888 > output.xml\n\
+or: dvbtextsubs 2320 888 < file.ts > output.xml\n\n\
 Options: -srt      Output subtitles in Subviewer format\n\
          -pts      PTS offset (in ms) to add to every PTS in output file\n\
-         -keeppts  Output original PTS values (do not offset from start of file)\n"
+         -keeppts  Output original PTS values (do not offset from start of file)\n\n"
 
 typedef enum {
    SUBFORMAT_XML,
@@ -133,8 +134,6 @@ int check_pes(unsigned char* buf,int n) {
   if ((buf[0]!=0) || (buf[1]!=0) || (buf[2]!=1)) {
     fprintf(stderr,"PES ERROR: does not start with 0x000001\n");
     return(0);
-//  } else {
-//    fprintf(stderr,"PES starts with 0x000001\n");
   }
   i=3;
   // stream_id: e0=video, c0=audio, bd=DVB subtitles, AC3 etc
@@ -161,10 +160,6 @@ int check_pes(unsigned char* buf,int n) {
 static const char* colours[]= {
   "black","red","lime","yellow","blue","magenta","cyan","white"
 };
-
-// There seems to be a limit of 8 teletext streams - OK for most (but
-// not all) transponders.
-#define MAX_CHANNELS 8
 
 typedef struct mag_struct_ {
    int valid;
@@ -552,9 +547,8 @@ int main(int argc, char** argv) {
   uint64_t tmp_pts;
   int pes_format=0;
   int PES_packet_length;
-  int i,m;
-  int pids[MAX_CHANNELS];
-  mag_struct mags[MAX_CHANNELS][8];
+  int i;
+  int theargs[2];
   int count;
   int the_page;
   int the_pid;
@@ -566,10 +560,6 @@ int main(int argc, char** argv) {
 
   fprintf(stderr,"dvbtextsubs v%s - (C) Dave Chapman 2003-2004\n",VERSION);
   fprintf(stderr,"Latest version available from http://www.linuxstb.org\n");
-
-  //  params.iFrequency=;
-  //  params.SymbolRate=;
-  //  params.FEC_inner=;
 
   subformat=SUBFORMAT_XML;
 
@@ -592,27 +582,21 @@ int main(int argc, char** argv) {
         USER_PTS=atoi(argv[i]);
         fprintf(stderr,"Adding user PTS offset of %lld to every timestamp.\n",USER_PTS);
       } else {
-        pids[count]=atoi(argv[i]);
-        if (pids[count]) { count++ ; }
+        theargs[count]=atoi(argv[i]);
+        if (theargs[count]) { count++ ; }
+        if (count > 2) { break; }
       }
     }
   }
 
   if ((pes_format==1) && (count==1)) {
-    the_page=(pids[0]%10)|((((pids[0]-(100*(pids[0]/100)))%100)/10)<<4)|((pids[0]/100)<<8);
+    the_page=(theargs[0]%10)|((((theargs[0]-(100*(theargs[0]/100)))%100)/10)<<4)|((theargs[0]/100)<<8);
   } else if ((pes_format==0) && (count==2)) {
-    the_pid=pids[0];
-    the_page=(pids[1]%10)|((((pids[1]-(100*(pids[1]/100)))%100)/10)<<4)|((pids[1]/100)<<8);
+    the_pid=theargs[0];
+    the_page=(theargs[1]%10)|((((theargs[1]-(100*(theargs[1]/100)))%100)/10)<<4)|((theargs[1]/100)<<8);
   } else {
     fprintf(stderr,USAGE);
     return(-1);
-  }
-
-  m=0;
-  mags[m][0].mag=8;
-  for (i=1;i<8;i++) { 
-    mags[m][i].mag=i; 
-    mags[m][i].valid=0;
   }
 
   thepage.valid=0;
