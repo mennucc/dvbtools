@@ -9,7 +9,7 @@ all: $(OBJS)
 dvbsubs: dvbsubs.c dvbsubs.h bitmap.o pes.o
 	$(CC) $(INCS) $(CFLAGS) -o dvbsubs dvbsubs.c bitmap.o pes.o -lpng -lm -lz
 
-dvbtextsubs: dvbtextsubs.c tables.h vtxdecode.h
+dvbtextsubs: dvbtextsubs.c tables.h vtxdecode.h pes.o
 	$(CC) $(INCS) $(CFLAGS) -o dvbtextsubs dvbtextsubs.c pes.o
 
 bitmap.o: bitmap.c bitmap.h
