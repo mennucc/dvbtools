@@ -563,6 +563,17 @@ void parse_descriptors(int info_len,unsigned char *buf) {
              descriptor_length=0;
              break;
 
+          case 0x59:
+             printf("<subtitling_descriptor tag=\"0x59\">\n");
+             while (j < descriptor_length) {
+               printf("<subtitle_stream lang=\"%s%s%s\" type=\"%d\" composition_page_id=\"%04x\" ancillary_page_id=\"%04x\" />\n",xmlify(buf[i]),xmlify(buf[i+1]),xmlify(buf[i+2]),buf[i+3],(buf[i+4]<<8)|buf[i+5],(buf[i+6]<<8)|buf[i+7]);
+               i+=7;
+               j+=7;
+             }
+             printf("</subtitling_descriptor>\n");
+             descriptor_length=0;
+             break;
+
           case 0x6a:
              printf("<ac3_descriptor tag=\"0x6a\" data=\"");
              for (j=0;j<descriptor_length;j++) printf("%02x",buf[i+j]);
