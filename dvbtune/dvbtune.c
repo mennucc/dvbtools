@@ -1340,13 +1340,15 @@ int main(int argc, char **argv)
     }
     printf("</satellite>\n");
   }
+
   if (do_info) {
-    if (freq< 100000000) {
+    if (pol!=0) {
       printf("<transponder type=\"S\" freq=\"%d\" srate=\"%d\" polarity=\"%c\" >\n",freq,srate,pol);
     } else {
       if (srate!=0) {
         printf("<transponder type=\"C\" freq=\"%d\" srate=\"%d\">\n",freq,srate);
       } else {
+        if (freq<1000000) freq*=1000UL;
         printf("<transponder type=\"T\" freq=\"%d\">\n",freq);
       }
     }
