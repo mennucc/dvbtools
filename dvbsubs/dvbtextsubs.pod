@@ -1,0 +1,129 @@
+=pod
+
+=head1 NAME
+
+dvbtextsubs - extract subtitles stored as teletext-pages in an MPEG-file.
+
+=head1 SYNOPSIS
+
+  dvbtextsubs [OPTIONS] pid pageno < recording.ts > subtitles.xml
+
+=head1 DESCRIPTION
+
+DVB broadcasts can include subtitles encoded in the teletext pages sent
+together with the video and audio in the MPEG transport stream. The teletext
+pages are sent on a separate pid and the subtitles are identified by their
+own pagenumber within the teletext stream. dvbtextsubs can extract the
+subtitles from within the MPEG transport stream and output it in either an
+xml-based format suitable for processing with L<xml2spumux> or in Subviewer
+format that can be read by most software video-players. 
+
+dvbtextsubs takes two mandatory parameters. The first parameter is the pid 
+for the teletext-stream in the input-file. The second parameter is the
+teletext pagenumber where the subtitles can be found. See the section
+B<FINDING PID AND PAGENUMBER> below for more information. If no options
+are passed to dvbtextsubs, the subtitles will be output in xml-format on 
+standard out.
+
+=head2 Supported stream formats
+
+dvbtextsubs expects to receive a stream in MPEG-TS format on standard in. The
+stream does not have to contain any PAT or PMT, only the teletext pid is
+necessary (and an audio-pid if the -apts option is used).
+
+=head2 Options
+
+The following options can be passed to dvbtextsubs:
+
+=over 4
+
+=item -srt
+
+Output data in Subviewer format.
+
+=item -pts <offset>
+
+Adjust each timestamp for the subtitles by adding <offset> milliseconds.
+
+=item -apts
+
+Ignore the timestamp on the teletext stream and use the timestamp of the
+audio-stream for the subtitles instead.
+
+=item -apid <pid>
+
+Use pid <pid> as the audio-pid to synchronize the subtitles to. This option
+is only valid together with the B<-apts> option. Normally, dvbtextsubs
+should be able to auto-detect the audio-pid.
+
+=item -keeppts
+
+Normally, dvbtextsubs outputs timestamps as an offset to the start of the
+MPEG stream. -keeppts tells dvbtextsubs to use the absolute value of
+the pts-field (Presentation Time-Stamp) instead.
+
+=back
+
+=head1 FINDING PID AND PAGENUMBER
+
+Information on which pid and pagenumber the subtitles can be found in is
+normally stored in the PMT (Program Map Table) inside the MPEG stream. One
+way to retrieve this information is to use L<dvbtune -i> to dump the PAT and
+PMT to xml-format. A channel with teletext subtitles contains an entry like
+this (indentation added for clarity:
+
+  <stream type="6" pid="1244">
+    <teletext tag="0x56">
+      <teletext_info lang="swe" type="1" page="100"/>
+      <teletext_info lang="swe" type="2" page="694"/>
+      <teletext_info lang="swe" type="5" page="794"/>
+    </teletext>
+  </stream>
+
+In this example, the teletext is sent with pid 1244 and the subtitles
+are sent on page 694 (type=2).
+
+=head1 EXAMPLES
+
+To extract the teletext subtitles from a recorded TS-stream containing
+an audio-pid, a video-pid and the subtitles on pid 1024, page 692, use
+
+dvbtextsubs 1024 692 < recording.ts > subtitles.xml
+
+The generated xml-file is suitable for feeding to L<xml2spumux>
+
+To extract the teletext subtitles from the same file in a format suitable
+for displaying with xine, use 
+
+dvbtextsubs -srt 1024 692 < recording.ts > recording.srt
+
+The file recording.srt will contain timestamps that are relative to the
+start of the file.
+
+If you want to play the file in mplayer instead, use
+
+dvbtextsubs -keeppts -srt -1024 692 < recording.ts > recording.srt
+
+This time the timestamps will be relative to the Presentation Timestamp in
+the MPEG-TS file.
+
+If the subtitles are not properly synchronized with the audio and video, it
+may be because the Presentation Timestamp for the teletext stream is
+different from the Presentation Timestamp for the audio/video. Try using
+the -apts and -apid options described above. They instruct dvbtextsubs to use 
+the relative position of the teletext page in the stream as the timestamp 
+rather than the PTS for the teletext stream.
+
+=head1 SEE ALSO
+
+L<xml2spumux>, L<dvbsubs>
+
+=head1 AUTHOR
+
+dvbtextsubs was written by Dave Chapman <dave -at- dchapman /dot/ com>. The
+latest version is available from http://www.linuxstb.org/dvbtextsubs/.
+
+This manual page was written by Mattias Holmlund, 
+<mattias -at- holmlund /dot/ se>
+
+=cut
