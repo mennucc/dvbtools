@@ -38,18 +38,17 @@
 
 #include <time.h>
 
-
-// DVB includes:
-#include <ost/osd.h>
-#include <ost/dmx.h>
-#include <ost/sec.h>
-#include <ost/frontend.h>
-#include <ost/video.h>
-#include <ost/audio.h>
-#include <ost/net.h>
-
 #define DVBDATE
 #include "dvbdate.h"
+
+#ifdef NEWSTRUCT
+#include <linux/dvb/dmx.h>
+#define DVB_DEMUX_DEVICE "/dev/dvb/adapter0/demux0"
+#else
+#include <ost/dmx.h>
+#define DVB_DEMUX_DEVICE "/dev/ost/demux0"
+#define dmx_sct_filter_params dmxSctFilterParams;
+#endif
 
 /*
  * return the DTT time in UNIX time_t format
@@ -105,11 +104,11 @@ time_t scan_date() {
   int i;
   time_t t;
   unsigned char buf[4096];
-  struct dmxSctFilterParams sctFilterParams;
+  struct dmx_sct_filter_params sctFilterParams;
   struct pollfd ufd;
 
   t = 0;
-  if((fd_date = open("/dev/ost/demux0",O_RDWR|O_NONBLOCK)) < 0){
+  if((fd_date = open(DVB_DEMUX_DEVICE,O_RDWR|O_NONBLOCK)) < 0){
       perror("fd_date DEVICE: ");
       return -1;
   }
@@ -130,7 +129,7 @@ time_t scan_date() {
 
   ufd.fd=fd_date;
   ufd.events=POLLPRI;
-  if (poll(&ufd,1,2000) < 0) {
+  if (poll(&ufd,1,10000) < 0) {
      errmsg("TIMEOUT reading from fd_date\n");
      close(fd_date);
      return;
