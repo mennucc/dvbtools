@@ -1,9 +1,9 @@
 /* dvb_defaults.h
 
-   Idea provided by Tomi Ollila, implemented by Dave Chapman.
+   Provided by Tomi Ollila
 
    Copyright (C) Dave Chapman 2002
-  
+
    This program is free software; you can redistribute it and/or
    modify it under the terms of the GNU General Public License
    as published by the Free Software Foundation; either version 2
@@ -45,53 +45,59 @@
 //#define FINLAND
 //#define FINLAND2
 
-/* Firstly, lets define some world-wide defaults */
-#define BANDWIDTH_DEFAULT           BANDWIDTH_8_MHZ
-#define CONSTELLATION_DEFAULT       QAM_64
-#define HIERARCHY_DEFAULT           HIERARCHY_NONE
-#define LP_CODERATE_DEFAULT         FEC_1_2   
-
-/* DVB-T */
-
-#ifdef UK
-
-/* UNITED KINGDOM settings */
-#define HP_CODERATE_DEFAULT         FEC_2_3
-#define TRANSMISSION_MODE_DEFAULT   TRANSMISSION_MODE_2K
-#define GUARD_INTERVAL_DEFAULT      GUARD_INTERVAL_1_32
-
-#endif
+/* UK defines are at the end, as a default option */
 
 #ifdef FINLAND
 
 /* FINLAND settings 1 */
+#define DVB_T_LOCATION		    "Suomessa"
+#define BANDWIDTH_DEFAULT           BANDWIDTH_8_MHZ
 #define HP_CODERATE_DEFAULT         FEC_2_3
+#define CONSTELLATION_DEFAULT       QAM_64
 #define TRANSMISSION_MODE_DEFAULT   TRANSMISSION_MODE_8K
 #define GUARD_INTERVAL_DEFAULT	    GUARD_INTERVAL_1_8
+#define HIERARCHY_DEFAULT           HIERARCHY_NONE
 
 #endif
 
 #ifdef FINLAND2
 
-/* FINLAND settings 2 */
+/* FINLAND settings 2 (someone verify there is such environment) */
+#define DVB_T_LOCATION		    "Suomessa II"
+#define BANDWIDTH_DEFAULT           BANDWIDTH_8_MHZ
 #define HP_CODERATE_DEFAULT         FEC_1_2
+#define CONSTELLATION_DEFAULT       QAM_64
 #define TRANSMISSION_MODE_DEFAULT   TRANSMISSION_MODE_2K
 #define GUARD_INTERVAL_DEFAULT      GUARD_INTERVAL_1_8
+#define HIERARCHY_DEFAULT           HIERARCHY_NONE
 
 #endif
 
-#ifndef HP_CODERATE_DEFAULT
+#if defined (UK) && defined (HP_CODERATE_DEFAULT)
+#error Multible countries defined
+#endif
 
+#ifndef DVB_T_LOCATION
+
+#ifndef UK
 #warning No DVB-T country defined in dvb_defaults.h
 #warning defaulting to UK
 #warning Ignore this if using Satellite or Cable
+#endif
 
-/* Default to the UK */
+/* UNITED KINGDOM settings */
+#define DVB_T_LOCATION		    "in United Kingdom"
+#define BANDWIDTH_DEFAULT           BANDWIDTH_8_MHZ
 #define HP_CODERATE_DEFAULT         FEC_2_3
+#define CONSTELLATION_DEFAULT       QAM_64
 #define TRANSMISSION_MODE_DEFAULT   TRANSMISSION_MODE_2K
 #define GUARD_INTERVAL_DEFAULT      GUARD_INTERVAL_1_32
+#define HIERARCHY_DEFAULT           HIERARCHY_NONE
 
 #endif
 
+#if HIERARCHY_DEFAULT == HIERARCHY_NONE && !defined (LP_CODERATE_DEFAULT)
+#define LP_CODERATE_DEFAULT (0) /* unused if HIERARCHY_NONE */
+#endif
 
-#endif 
+#endif
