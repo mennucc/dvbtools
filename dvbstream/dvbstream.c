@@ -129,7 +129,7 @@ void set_ts_filt(int fd,uint16_t pid, dmx_pes_type_t pestype)
 {
   struct dmx_pes_filter_params pesFilterParams;
 
-  fprintf(stderr,"Setting filter for PID %d\n",pid);
+  //fprintf(stderr,"Setting filter for PID %d\n",pid);
   pesFilterParams.pid     = pid;
   pesFilterParams.input   = DMX_IN_FRONTEND;
   pesFilterParams.output  = DMX_OUT_TS_TAP;
@@ -137,7 +137,7 @@ void set_ts_filt(int fd,uint16_t pid, dmx_pes_type_t pestype)
   pesFilterParams.flags   = DMX_IMMEDIATE_START;
 
   if (ioctl(fd, DMX_SET_PES_FILTER, &pesFilterParams) < 0)  {
-    fprintf(stderr,"FILTER %i: ",pid);
+    fprintf(stderr,"Failed setting filter for pid %i: ",pid);
     perror("DMX SET PES FILTER");
   }
 }
@@ -400,6 +400,13 @@ typedef struct {
   int pid_cnt;
   long start_time; // in seconds
   long end_time;   // in seconds
+  int socket;
+  struct rtpheader hdr;
+  struct sockaddr_in sOut;
+  unsigned char buf[MTU];
+  unsigned char net[20];
+  int pos;
+  int port;
 } pids_map_t;
 
 pids_map_t *pids_map;
@@ -459,6 +466,7 @@ int main(int argc, char **argv)
     fprintf(stderr,"Usage: dvbtune [OPTIONS] pid1 pid2 ... pid8\n\n");
     fprintf(stderr,"-i          IP multicast address\n");
     fprintf(stderr,"-r          IP multicast port\n");
+    fprintf(stderr,"-net ip:prt IP address:port combination to be followed by pids list. Can be repeated to generate multiple RTP streams\n");
     fprintf(stderr,"-o          Stream to stdout instead of network\n");
     fprintf(stderr,"-o:file.ts  Stream to named file instead of network\n");
     fprintf(stderr,"-n secs     Stop after secs seconds\n");
@@ -502,11 +510,55 @@ int main(int argc, char **argv)
         output_type=RTP_NONE;
         if (secs==-1) { secs=10; }
       } else if (strcmp(argv[i],"-i")==0) {
+        if(pids_map != NULL) {
+	  fprintf(stderr, "ERROR! -i and -r can't be used with -o and -net.  Use -net instead\n");
+	  exit(1);
+	}
         i++;
         strcpy(ipOut,argv[i]);
       } else if (strcmp(argv[i],"-r")==0) {
+        if(pids_map != NULL) {
+	  fprintf(stderr, "ERROR! -i and -r can't be used with -o and -net.  Use -net instead\n");
+	  exit(1);
+	}
         i++;
         portOut=atoi(argv[i]);
+      } else if (strcmp(argv[i],"-net")==0) {
+        char *tmp;
+        i++;
+	tmp = strchr(argv[i], ':');
+	if((tmp == NULL) || (tmp - argv[i] > 19)) {
+	  fprintf(stderr, "No valid IP:port found after -net switch, discarding\n");
+	} else {
+	  int len = (int) (tmp - argv[i]);
+	  char addr[20];
+	  int port;
+          strncpy(ipOut, argv[i], len);
+	  ipOut[len] = 0;
+	  strncpy(addr, argv[i], len);
+	  addr[len] = 0;
+	  port = portOut = atoi(tmp+1);
+	  
+	  
+          pids_map = (pids_map_t*) realloc(pids_map, sizeof(pids_map_t) * (map_cnt+1));
+	  if(pids_map != NULL) {
+	    map_cnt++;
+            pids_map[map_cnt-1].pid_cnt = 0;
+            pids_map[map_cnt-1].start_time=start_time;
+            pids_map[map_cnt-1].end_time=end_time;
+            for(j=0; j < MAX_CHANNELS; j++) pids_map[map_cnt-1].pids[j] = -1;
+            pids_map[map_cnt-1].filename = NULL;
+	    strncpy(pids_map[map_cnt-1].net, addr, len);
+	    pids_map[map_cnt-1].net[len] = 0;
+	    pids_map[map_cnt-1].port = port;
+	    pids_map[map_cnt-1].pos = 0;
+	 
+	    pids_map[map_cnt-1].socket = makesocket(addr,port,ttl,&(pids_map[map_cnt-1].sOut));
+    	    initrtp(&(pids_map[map_cnt-1].hdr),(output_type==RTP_TS ? 33 : 34));
+    	    output_type = MAP_TS;
+	  } else
+	      fprintf(stderr, "Couldn't alloc enough entry for this %s:%d address\n", addr, port); 
+	}
       } else if (strcmp(argv[i],"-f")==0) {
         i++;
         freq=atoi(argv[i])*1000UL;
@@ -674,17 +726,25 @@ int main(int argc, char **argv)
         }
       } else if (strstr(argv[i], "-o:")==argv[i]) {
         if (strlen(argv[i]) > 3) {
-          fprintf(stderr,"Processing %s\n",argv[i]);
-          map_cnt++;
-          pids_map = (pids_map_t*) realloc(pids_map, sizeof(pids_map_t) * map_cnt);
-          pids_map[map_cnt-1].pid_cnt = 0;
-          pids_map[map_cnt-1].start_time=start_time;
-          pids_map[map_cnt-1].end_time=end_time;
-          for(j=0; j < MAX_CHANNELS; j++) pids_map[map_cnt-1].pids[j] = -1;
-          pids_map[map_cnt-1].filename = (char *) malloc(strlen(argv[i]) - 2);
-          strcpy(pids_map[map_cnt-1].filename, &argv[i][3]);
+	  char * fname;
+	  fname = (char *) malloc(strlen(argv[i]) - 2);
+	  if(fname == NULL) {
+	  	fprintf(stderr, "Couldn't alloc enough memory for this -o: entry, discarding\n");
+	  } else {
+	    strcpy(fname, &argv[i][3]);
+            pids_map = (pids_map_t*) realloc(pids_map, sizeof(pids_map_t) * (map_cnt+1));
+	    if(pids_map != NULL) {
+	      map_cnt++;
+              pids_map[map_cnt-1].pid_cnt = 0;
+              pids_map[map_cnt-1].start_time=start_time;
+              pids_map[map_cnt-1].end_time=end_time;
+              for(j=0; j < MAX_CHANNELS; j++) pids_map[map_cnt-1].pids[j] = -1;
+              pids_map[map_cnt-1].filename = fname;
 
-          output_type = MAP_TS;
+              output_type = MAP_TS;
+	    } else
+	        fprintf(stderr, "Couldn't alloc enough memory for file %s: entry, discarding\n", fname);
+         }
         }
       } else {
         if ((ch=(char*)strstr(argv[i],":"))!=NULL) {
@@ -738,6 +798,7 @@ int main(int argc, char **argv)
   }
 
   for (i=0;i<map_cnt;i++) {
+    if(pids_map[i].filename) {
     FILE *f;
     f = fopen(pids_map[i].filename, "w+b");
     if (f != NULL) {
@@ -748,6 +809,7 @@ int main(int argc, char **argv)
       pids_map[i].fd = -1;
       fprintf(stderr, "Couldn't open file %s, errno:%d\n", pids_map[map_cnt-1].filename, errno);
     }
+  }
   }
 
   if (signal(SIGHUP, SignalHandler) == SIG_IGN) signal(SIGHUP, SIG_IGN);
@@ -769,9 +831,14 @@ int main(int argc, char **argv)
 
   //  if (i<0) { exit(i); }
 
+  if(map_cnt > 0)
+    fprintf(stderr, "\n");
   for (i=0;i<map_cnt;i++) {
     if ((secs==-1) || (secs < pids_map[i].end_time)) { secs=pids_map[i].end_time; }
-    fprintf(stderr,"MAP %d, file %s: From %ld secs, To %ld secs, %d PIDs - ",i,pids_map[i].filename,pids_map[i].start_time,pids_map[i].end_time,pids_map[i].pid_cnt);
+    if(pids_map[i].filename != NULL)
+    	fprintf(stderr,"MAP %d, file %s: From %ld secs, To %ld secs, %d PIDs - ",i,pids_map[i].filename,pids_map[i].start_time,pids_map[i].end_time,pids_map[i].pid_cnt);
+    else
+        fprintf(stderr,"MAP %d, addr %s:%d From %ld secs, To %ld secs, %d PIDs - ",i,pids_map[i].net,pids_map[i].port,pids_map[i].start_time,pids_map[i].end_time,pids_map[i].pid_cnt);
     for (j=0;j<MAX_CHANNELS;j++) { if (pids_map[i].pids[j]!=-1) fprintf(stderr," %d",pids_map[i].pids[j]); }
     fprintf(stderr,"\n");
   }
@@ -901,7 +968,9 @@ int main(int argc, char **argv)
          my_ts_to_ps((uint8_t*)buf, pids[0], pids[1]);
        }
     } else if(output_type==MAP_TS) {
-       if(read(fd_dvr, buf, TS_SIZE) > 0) {
+       int bytes_read;
+       bytes_read = read(fd_dvr, buf, TS_SIZE);
+       if(bytes_read > 0) {
          if(buf[0] == 0x47) {
            int pid, i, j;
 
@@ -913,7 +982,18 @@ int main(int argc, char **argv)
                  for (j = 0; j < MAX_CHANNELS; j++) {
                    if (pids_map[i].pids[j] == pid) {
                      errno = 0;
-                     write(pids_map[i].fd, buf, TS_SIZE);
+		     if(pids_map[i].filename)
+                        write(pids_map[i].fd, buf, TS_SIZE);
+		     else {
+		        if((pids_map[i].pos + PACKET_SIZE) > MAX_RTP_SIZE) {
+        		    hdr.timestamp = getmsec()*90;
+		    	    sendrtp2(pids_map[i].socket, &(pids_map[i].sOut), &(pids_map[i].hdr), pids_map[i].buf, pids_map[i].pos);
+			    pids_map[i].pos = 0;
+			} 
+			
+			memcpy(&(pids_map[i].buf[pids_map[i].pos]), buf, bytes_read);
+			pids_map[i].pos += bytes_read;
+		     }
                    }
                  }
                }
