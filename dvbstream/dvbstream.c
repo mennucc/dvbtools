@@ -461,6 +461,8 @@ int main(int argc, char **argv)
     fprintf(stderr,"-o          Stream to stdout instead of network\n");
     fprintf(stderr,"-o:file.ts  Stream to named file instead of network\n");
     fprintf(stderr,"-n secs     Stop after secs seconds\n");
+    fprintf(stderr,"-from n     Start saving the file previously specified with -o: syntax in n minutes time\n");
+    fprintf(stderr,"-to n       Stop saving the file previously specified with -o: syntax in n minutes time\n");
     fprintf(stderr,"-ps         Convert stream to Program Stream format (needs exactly 2 pids)\n");
     fprintf(stderr,"-v vpid     Decode video PID (full cards only)\n");
     fprintf(stderr,"-a apid     Decode audio PID (full cards only)\n");
