@@ -388,8 +388,8 @@ int tune_it(int fd_frontend, int fd_sec, unsigned int freq, unsigned int srate, 
 
   switch(fe_info.type) {
     case FE_OFDM:
-      fprintf(stderr,"tuning DVB-T (%s) to %d\n",DVB_T_LOCATION,freq);
 #ifdef NEWSTRUCT
+      if (freq < 1000000) freq*=1000UL;
       feparams.frequency=freq;
       feparams.inversion=INVERSION_OFF;
       feparams.u.ofdm.bandwidth=bandWidth;
@@ -400,6 +400,7 @@ int tune_it(int fd_frontend, int fd_sec, unsigned int freq, unsigned int srate, 
       feparams.u.ofdm.guard_interval=guardInterval;
       feparams.u.ofdm.hierarchy_information=HIERARCHY_DEFAULT;
 #else
+      if (freq < 1000000) freq*=1000UL;
       feparams.Frequency=freq;
       feparams.Inversion=INVERSION_OFF;
       feparams.u.ofdm.bandWidth=bandWidth;
@@ -410,6 +411,7 @@ int tune_it(int fd_frontend, int fd_sec, unsigned int freq, unsigned int srate, 
       feparams.u.ofdm.guardInterval=guardInterval;
       feparams.u.ofdm.HierarchyInformation=HIERARCHY_DEFAULT;
 #endif
+      fprintf(stderr,"tuning DVB-T (%s) to %d Hz\n",DVB_T_LOCATION,freq);
       break;
     case FE_QPSK:
 #ifdef NEWSTRUCT
