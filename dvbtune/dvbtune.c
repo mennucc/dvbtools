@@ -382,8 +382,7 @@ void set_dpid(ushort dpid)
                 ioctl(fd_demuxd, DMX_STOP, dpid);
                 return;
         }
-	memset(&sctFilterParams.filter.filter,0,DMX_FILTER_SIZE);
-	memset(&sctFilterParams.filter.mask,0,DMX_FILTER_SIZE);
+        memset(&sctFilterParams.filter,0,sizeof(sctFilterParams.filter));
         sctFilterParams.pid = dpid;
 	//sctFilterParams.filter.filter[0] = 0x3e;
         //sctFilterParams.filter.mask[0] = 0xff; 
@@ -679,8 +678,7 @@ int scan_nit(int x) {
   }
 
   sctFilterParams.pid=0x10;
-  memset(&sctFilterParams.filter.filter,0,DMX_FILTER_SIZE);
-  memset(&sctFilterParams.filter.mask,0,DMX_FILTER_SIZE);
+  memset(&sctFilterParams.filter,0,sizeof(sctFilterParams.filter));
   sctFilterParams.timeout = 0;
   sctFilterParams.flags = DMX_IMMEDIATE_START;
   sctFilterParams.filter.filter[0]=x;
@@ -758,8 +756,7 @@ void scan_pmt(int pid,int sid,int change) {
   }
 
   sctFilterParams.pid=pid;
-  memset(&sctFilterParams.filter.filter,0,DMX_FILTER_SIZE);
-  memset(&sctFilterParams.filter.mask,0,DMX_FILTER_SIZE);
+  memset(&sctFilterParams.filter,0,sizeof(sctFilterParams.filter));
   sctFilterParams.timeout = 0;
   sctFilterParams.flags = DMX_IMMEDIATE_START;
   sctFilterParams.filter.filter[0]=0x02;
@@ -846,8 +843,7 @@ void scan_pat() {
   }
 
   sctFilterParams.pid=0x0;
-  memset(&sctFilterParams.filter.filter,0,DMX_FILTER_SIZE);
-  memset(&sctFilterParams.filter.mask,0,DMX_FILTER_SIZE);
+  memset(&sctFilterParams.filter,0,sizeof(sctFilterParams.filter));
   sctFilterParams.timeout = 0;
   sctFilterParams.flags = DMX_IMMEDIATE_START;
   sctFilterParams.filter.filter[0]=0x0;
@@ -912,8 +908,7 @@ void scan_sdt() {
   }
 
   sctFilterParams.pid=0x11;
-  memset(&sctFilterParams.filter.filter,0,DMX_FILTER_SIZE);
-  memset(&sctFilterParams.filter.mask,0,DMX_FILTER_SIZE);
+  memset(&sctFilterParams.filter,0,sizeof(sctFilterParams.filter));
   sctFilterParams.timeout = 0;
   sctFilterParams.flags = DMX_IMMEDIATE_START;
   sctFilterParams.filter.filter[0]=0x42;
