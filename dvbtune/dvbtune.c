@@ -1151,17 +1151,17 @@ int main(int argc, char **argv)
         }
       } else if (strcmp(argv[i],"-cr")==0) {
         i++;
-        if (strcmp(argv[i],"AUTO")) {
+        if (!strcmp(argv[i],"AUTO")) {
           HP_CodeRate=FEC_AUTO;
-        } else if (strcmp(argv[i],"1_2")) {
+        } else if (!strcmp(argv[i],"1_2")) {
           HP_CodeRate=FEC_1_2;
-        } else if (strcmp(argv[i],"2_3")) {
+        } else if (!strcmp(argv[i],"2_3")) {
           HP_CodeRate=FEC_2_3;
-        } else if (strcmp(argv[i],"3_4")) {
+        } else if (!strcmp(argv[i],"3_4")) {
           HP_CodeRate=FEC_3_4;
-        } else if (strcmp(argv[i],"5_6")) {
+        } else if (!strcmp(argv[i],"5_6")) {
           HP_CodeRate=FEC_5_6;
-        } else if (strcmp(argv[i],"7_8")) {
+        } else if (!strcmp(argv[i],"7_8")) {
           HP_CodeRate=FEC_7_8;
         } else {
           fprintf(stderr,"Invalid Code Rate: %s\n",argv[i]);
