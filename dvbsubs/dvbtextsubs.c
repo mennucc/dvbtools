@@ -312,7 +312,8 @@ void print_subviewer(FILE* fd, subtitle_t* subtitle) {
   }
 
   fprintf(stderr,"%s\r",pts2hmsu(subtitle->start_PTS));
-  fprintf(fd,"%d\n%s --> %s\n",++sub_count,pts2hmsu(subtitle->start_PTS),pts2hmsu(subtitle->end_PTS));
+  fprintf(fd,"%d\n%s --> ",++sub_count,pts2hmsu(subtitle->start_PTS));
+  fprintf(fd,"%s\n",pts2hmsu(subtitle->end_PTS));
   
   j=0;
   for (row=0;row<subtitle->num_lines;row++) {
