@@ -533,9 +533,9 @@ int process_pes_packet (unsigned char* buf,int n, int the_page) {
     while (k < n) {
       data_unit_id=buf[k++];
       data_len=buf[k++];
-      if (data_len!=0x2c) { data_len=0x2c; }
+//      if (data_len!=0x2c) { data_len=0x2c; }
 //      fprintf(stdout,"data_unit_id=%02x,data_len=%d\n",data_unit_id,data_len);
-//      if ((data_unit_id==0x02) || (data_unit_id==0x03)) {
+      if ((data_unit_id==0x02) || (data_unit_id==0x03)) {
         for (j=k;j<k+data_len;j++) { 
           buf[j]=invtab[buf[j]];
         }
@@ -545,12 +545,9 @@ int process_pes_packet (unsigned char* buf,int n, int the_page) {
         // mag==0 means page is 8nn
         if (mag==0) mag=8;
         set_line(line,&buf[k+4],mag,the_page);
-//        }
+      }
       k+=data_len;
     }
-  } else {
-     fprintf(stderr,"This is not a private data type 1 stream - are you sure you specified the correct PID? stream_id=%02x\n",stream_id);
-     exit(1);
   }
   return(0);
 }
