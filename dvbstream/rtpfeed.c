@@ -39,8 +39,14 @@
 #include "rtp.h"
 
 // DVB includes:
+#ifdef NEWSTRUCT
+#include <linux/dvb/dmx.h>
+#include <linux/dvb/frontend.h>
+#else
 #include <ost/dmx.h>
 #include <ost/frontend.h>
+#define dmx_pes_filter_params dmxPesFilterParams
+#endif
 
 
 void dumprtp(int socket, int fd_dvr) {
@@ -63,13 +69,18 @@ void dumprtp(int socket, int fd_dvr) {
 
 void set_ts_filt(int fd,uint16_t pid, int type)
 {
-  struct dmxPesFilterParams pesFilterParams;
+  struct dmx_pes_filter_params pesFilterParams;
 
   pesFilterParams.pid     = pid;
   pesFilterParams.input   = DMX_IN_DVR;
   pesFilterParams.output  = DMX_OUT_DECODER;
+#ifdef NEWSTRUCT
+  if (type==1) pesFilterParams.pes_type = DMX_PES_VIDEO;
+  if (type==2) pesFilterParams.pes_type = DMX_PES_AUDIO;
+#else
   if (type==1) pesFilterParams.pesType = DMX_PES_VIDEO;
   if (type==2) pesFilterParams.pesType = DMX_PES_AUDIO;
+#endif
   pesFilterParams.flags   = DMX_IMMEDIATE_START;
 
   if (ioctl(fd, DMX_SET_PES_FILTER, &pesFilterParams) < 0)  {

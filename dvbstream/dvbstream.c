@@ -90,13 +90,13 @@ char* demuxdev[4]={"/dev/ost/demux0","/dev/ost/demux1","/dev/ost/demux2","/dev/o
 int card=0;
 
 int Interrupted=0;
-SpectralInversion specInv=INVERSION_AUTO;
+fe_spectral_inversion_t specInv=INVERSION_AUTO;
 int tone=-1;
-Modulation modulation=CONSTELLATION_DEFAULT;
-TransmitMode TransmissionMode=TRANSMISSION_MODE_DEFAULT;
-BandWidth bandWidth=BANDWIDTH_DEFAULT;
-GuardInterval guardInterval=GUARD_INTERVAL_DEFAULT;
-CodeRate HP_CodeRate=HP_CODERATE_DEFAULT;
+fe_modulation_t modulation=CONSTELLATION_DEFAULT;
+fe_transmit_mode_t TransmissionMode=TRANSMISSION_MODE_DEFAULT;
+fe_bandwidth_t bandWidth=BANDWIDTH_DEFAULT;
+fe_guard_interval_t guardInterval=GUARD_INTERVAL_DEFAULT;
+fe_code_rate_t HP_CodeRate=HP_CODERATE_DEFAULT;
 unsigned int diseqc=0;
 char pol=0;
 
@@ -135,14 +135,18 @@ long getmsec() {
 // There seems to be a limit of 8 simultaneous filters in the driver
 #define MAX_CHANNELS 8
 
-void set_ts_filt(int fd,uint16_t pid, dmxPesType_t pestype)
+void set_ts_filt(int fd,uint16_t pid, dmx_pes_type_t pestype)
 {
-  struct dmxPesFilterParams pesFilterParams;
+  struct dmx_pes_filter_params pesFilterParams;
 
   pesFilterParams.pid     = pid;
   pesFilterParams.input   = DMX_IN_FRONTEND;
   pesFilterParams.output  = DMX_OUT_TS_TAP;
+#ifdef NEWSTRUCT
+  pesFilterParams.pes_type = pestype;
+#else
   pesFilterParams.pesType = pestype;
+#endif
   pesFilterParams.flags   = DMX_IMMEDIATE_START;
 
   if (ioctl(fd, DMX_SET_PES_FILTER, &pesFilterParams) < 0)  {
@@ -201,7 +205,7 @@ int process_telnet() {
   int cmd_i=0;
   int i;
   char* ch;
-  dmxPesType_t pestype;
+  dmx_pes_type_t pestype;
   unsigned long freq=0;
   unsigned long srate=0;
 
@@ -418,7 +422,7 @@ int main(int argc, char **argv)
   unsigned long srate=0;
   int count;
   char* ch;
-  dmxPesType_t pestype;
+  dmx_pes_type_t pestype;
   int bytes_read;
   unsigned char* free_bytes;
   int output_type=RTP_TS;
