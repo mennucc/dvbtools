@@ -153,6 +153,19 @@ int tune_it(int fd_frontend, int fd_sec, unsigned int freq, unsigned int srate, 
   struct secStatus sec_state;
   FrontendInfo fe_info;
 
+  /* discard stale frontend events */
+  /*
+  pfd[0].fd = fd_frontend;
+  pfd[0].events = POLLIN;
+
+  if (poll(pfd,1,500)){
+    if (pfd[0].revents & POLLIN){
+      while (1) {
+        if (ioctl (fd_frontend, FE_GET_EVENT, &event) == -1) { break; }
+      }
+    }
+  }
+  */
   if ( (res = ioctl(fd_frontend,FE_GET_INFO, &fe_info) < 0)){
      perror("FE_GET_INFO: ");
      return -1;
@@ -164,7 +177,7 @@ int tune_it(int fd_frontend, int fd_sec, unsigned int freq, unsigned int srate, 
 
   switch(fe_info.type) {
     case FE_OFDM:
-      fprintf(stderr,"tuning DVB-T to %d\n",freq);
+      fprintf(stderr,"tuning DVB-T (%s) to %d\n",DVB_T_LOCATION,freq);
       feparams.Frequency=freq;
       feparams.Inversion=INVERSION_OFF;
       feparams.u.ofdm.bandWidth=BANDWIDTH_DEFAULT;
