@@ -610,17 +610,18 @@ int main(int argc, char **argv)
 
   if ( (freq>100000000)) {
     if (open_fe(&fd_frontend,0)) {
-      tune_it(fd_frontend,0,freq,0,0,tone,specInv,diseqc,modulation,HP_CodeRate,TransmissionMode,guardInterval,bandWidth);
+      i=tune_it(fd_frontend,0,freq,0,0,tone,specInv,diseqc,modulation,HP_CodeRate,TransmissionMode,guardInterval,bandWidth);
       close(fd_frontend);
     }
   } else if ((freq!=0) && (pol!=0) && (srate!=0)) {
     if (open_fe(&fd_frontend,&fd_sec)) {
-      tune_it(fd_frontend,fd_sec,freq,srate,pol,tone,specInv,diseqc,modulation,HP_CodeRate,TransmissionMode,guardInterval,bandWidth);
+      i=tune_it(fd_frontend,fd_sec,freq,srate,pol,tone,specInv,diseqc,modulation,HP_CodeRate,TransmissionMode,guardInterval,bandWidth);
       close(fd_frontend);
       if (fd_sec) close(fd_sec);
     }
   }
 
+  if (i<0) { exit(i); }
 
   for (i=0;i<npids;i++) {  
     if((fd[i] = open(demuxdev[card],O_RDWR)) < 0){
