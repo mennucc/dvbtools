@@ -1,7 +1,7 @@
 #!/bin/sh
-DUMPRTP=/home/dave/DVB/dvbstream-0.2/dumprtp
-TS2PS=/home/dave/DVB/DVB/apps/mpegtools/ts2ps
+DUMPRTP=/home/dave/DVB/cvs/dvbstream/dumprtp
+TS2PS=/home/dave/src/mpegtools/ts2ps
 BFR=bfr
-MPLAYER='mplayer -ao sdl -framedrop -'
+MPLAYER='mplayer -ao sdl -vo sdl -'
 
-$DUMPRTP | $TS2PS 1 2 | $BFR -m 1024kB  | $MPLAYER
+$DUMPRTP | $TS2PS 0 0 | $BFR -m 1024kB  | $MPLAYER
