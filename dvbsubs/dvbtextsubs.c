@@ -43,11 +43,9 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include <stdint.h>
 #include <string.h>
 #include <ctype.h>
-#include <sys/ioctl.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
-#include <sys/time.h>
 
 // dvbtext includes:
 #include "tables.h"
