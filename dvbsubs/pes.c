@@ -7,6 +7,10 @@
 
 #include "pes.h"
 
+#ifdef WIN32
+  typedef int ssize_t;
+#endif
+
 extern uint64_t audio_pts,first_audio_pts;
 extern int audio_pts_wrap;
 extern uint16_t apid;

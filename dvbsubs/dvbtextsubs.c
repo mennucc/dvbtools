@@ -52,6 +52,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "vtxdecode.h"
 #include "pes.h"
 
+#define PESBUFSIZE 1265536
 #define VERSION "0.3"
 #define USAGE "\n\
 USAGE: dvbtextsubs [options] pid pageno\n\
@@ -555,7 +556,7 @@ int process_pes_packet (unsigned char* buf,int n, int the_page) {
 
 
 int main(int argc, char** argv) {
-  unsigned char pesbuf[1265536];
+  unsigned char* pesbuf;
   int pes_format=0;
   int PES_packet_length;
   int i;
@@ -565,6 +566,13 @@ int main(int argc, char** argv) {
   int the_pid;
   is_first=0;
  
+  pesbuf=malloc(PESBUFSIZE);
+  if (!pesbuf) { 
+    fprintf(stderr,"ERROR: Can not allocate memory for PES buffer, aborting.\n");
+    fflush(stderr);
+    exit(1);
+  }
+
   memset(prevpage.pagebuf,' ', 25*40);
   for (i=1;i<25;i++) { prevpage.line_transmitted[i]=0; }
   prevpage.num_valid_lines=0;
@@ -616,6 +624,11 @@ int main(int argc, char** argv) {
   }
 
   thepage.valid=0;
+
+  #ifdef WIN32
+  // stupid idiot non-binary mode is default there
+  _setmode(_fileno(stdin),_O_BINARY);
+  #endif
 
   if (subformat==SUBFORMAT_XML) {
     printf("<?xml version=\"1.0\" encoding=\"iso-8859-1\" ?>\n");
