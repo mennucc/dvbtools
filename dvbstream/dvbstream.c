@@ -88,7 +88,8 @@ fe_modulation_t modulation=CONSTELLATION_DEFAULT;
 fe_transmit_mode_t TransmissionMode=TRANSMISSION_MODE_DEFAULT;
 fe_bandwidth_t bandWidth=BANDWIDTH_DEFAULT;
 fe_guard_interval_t guardInterval=GUARD_INTERVAL_DEFAULT;
-fe_code_rate_t HP_CodeRate=HP_CODERATE_DEFAULT;
+fe_code_rate_t HP_CodeRate=HP_CODERATE_DEFAULT, LP_CodeRate=LP_CODERATE_DEFAULT;
+fe_hierarchy_t hier=HIERARCHY_DEFAULT;
 unsigned char diseqc=0;
 char pol=0;
 
@@ -309,7 +310,7 @@ int process_telnet() {
                 while (cmd[i]==' ') i++;
                 srate=atoi(&cmd[i])*1000UL;
                 fprintf(stderr,"Tuning to %ld,%ld,%c\n",freq,srate,pol);
-                tune_it(fd_frontend,freq,srate,pol,tone,specInv,diseqc,modulation,HP_CodeRate,TransmissionMode,guardInterval,bandWidth);
+                tune_it(fd_frontend,freq,srate,pol,tone,specInv,diseqc,modulation,HP_CodeRate,TransmissionMode,guardInterval,bandWidth, LP_CodeRate, hier);
               }
             }
           }
@@ -479,9 +480,11 @@ int main(int argc, char **argv)
     fprintf(stderr,"-I [0|1|2]  0=Spectrum Inversion off, 1=Spectrum Inversion on, 2=auto\n");
     fprintf(stderr,"-qam X      DVB-T modulation - 16%s, 32%s, 64%s, 128%s or 256%s\n",(CONSTELLATION_DEFAULT==QAM_16 ? " (default)" : ""),(CONSTELLATION_DEFAULT==QAM_32 ? " (default)" : ""),(CONSTELLATION_DEFAULT==QAM_64 ? " (default)" : ""),(CONSTELLATION_DEFAULT==QAM_128 ? " (default)" : ""),(CONSTELLATION_DEFAULT==QAM_256 ? " (default)" : ""));
     fprintf(stderr,"-gi N       DVB-T guard interval 1_N (N=32%s, 16%s, 8%s or 4%s)\n",(GUARD_INTERVAL_DEFAULT==GUARD_INTERVAL_1_32 ? " (default)" : ""),(GUARD_INTERVAL_DEFAULT==GUARD_INTERVAL_1_16 ? " (default)" : ""),(GUARD_INTERVAL_DEFAULT==GUARD_INTERVAL_1_8 ? " (default)" : ""),(GUARD_INTERVAL_DEFAULT==GUARD_INTERVAL_1_4 ? " (default)" : ""));
-    fprintf(stderr,"-cr N       DVB-T code rate. N=AUTO%s, 1_2%s, 2_3%s, 3_4%s, 5_6%s, 7_8%s\n",(HP_CODERATE_DEFAULT==FEC_AUTO ? " (default)" : ""),(HP_CODERATE_DEFAULT==FEC_1_2 ? " (default)" : ""),(HP_CODERATE_DEFAULT==FEC_2_3 ? " (default)" : ""),(HP_CODERATE_DEFAULT==FEC_3_4 ? " (default)" : ""),(HP_CODERATE_DEFAULT==FEC_5_6 ? " (default)" : ""),(HP_CODERATE_DEFAULT==FEC_7_8 ? " (default)" : ""));
+    fprintf(stderr,"-cr N       DVB-T/C code rate. N=AUTO%s, 1_2%s, 2_3%s, 3_4%s, 5_6%s, 7_8%s\n",(HP_CODERATE_DEFAULT==FEC_AUTO ? " (default)" : ""),(HP_CODERATE_DEFAULT==FEC_1_2 ? " (default)" : ""),(HP_CODERATE_DEFAULT==FEC_2_3 ? " (default)" : ""),(HP_CODERATE_DEFAULT==FEC_3_4 ? " (default)" : ""),(HP_CODERATE_DEFAULT==FEC_5_6 ? " (default)" : ""),(HP_CODERATE_DEFAULT==FEC_7_8 ? " (default)" : ""));
+    fprintf(stderr,"-crlp N     DVB-T code rate LP. N=AUTO%s, 1_2%s, 2_3%s, 3_4%s, 5_6%s, 7_8%s\n",(LP_CODERATE_DEFAULT==FEC_AUTO ? " (default)" : ""),(LP_CODERATE_DEFAULT==FEC_1_2 ? " (default)" : ""),(LP_CODERATE_DEFAULT==FEC_2_3 ? " (default)" : ""),(LP_CODERATE_DEFAULT==FEC_3_4 ? " (default)" : ""),(LP_CODERATE_DEFAULT==FEC_5_6 ? " (default)" : ""),(LP_CODERATE_DEFAULT==FEC_7_8 ? " (default)" : ""));
     fprintf(stderr,"-bw N       DVB-T bandwidth (Mhz) - N=6%s, 7%s or 8%s\n",(BANDWIDTH_DEFAULT==BANDWIDTH_6_MHZ ? " (default)" : ""),(BANDWIDTH_DEFAULT==BANDWIDTH_7_MHZ ? " (default)" : ""),(BANDWIDTH_DEFAULT==BANDWIDTH_8_MHZ ? " (default)" : ""));
     fprintf(stderr,"-tm N       DVB-T transmission mode - N=2%s or 8%s\n",(TRANSMISSION_MODE_DEFAULT==TRANSMISSION_MODE_2K ? " (default)" : ""),(TRANSMISSION_MODE_DEFAULT==TRANSMISSION_MODE_8K ? " (default)" : ""));
+    fprintf(stderr,"-hy N       DVB-T hierarchy - N=1%s, 2%s, 4%s, NONE%s or AUTO%s\n",(HIERARCHY_DEFAULT==HIERARCHY_1 ? " (default)" : ""),(HIERARCHY_DEFAULT==HIERARCHY_2 ? " (default)" : ""),(HIERARCHY_DEFAULT==HIERARCHY_4 ? " (default)" : ""),(HIERARCHY_DEFAULT==HIERARCHY_NONE ? " (default)" : ""),(HIERARCHY_DEFAULT==HIERARCHY_AUTO ? " (default)" : ""));
 
     fprintf(stderr,"\n-analyse    Perform a simple analysis of the bitrates of the PIDs in the transport stream\n");
 
@@ -622,6 +625,38 @@ int main(int argc, char **argv)
           fprintf(stderr,"Invalid Code Rate: %s\n",argv[i]);
           exit(0);
         }
+      } else if (strcmp(argv[i],"-crlp")==0) {
+        i++;
+        if (!strcmp(argv[i],"AUTO")) {
+          LP_CodeRate=FEC_AUTO;
+        } else if (!strcmp(argv[i],"1_2")) {
+          LP_CodeRate=FEC_1_2;
+        } else if (!strcmp(argv[i],"2_3")) {
+          LP_CodeRate=FEC_2_3;
+        } else if (!strcmp(argv[i],"3_4")) {
+          LP_CodeRate=FEC_3_4;
+        } else if (!strcmp(argv[i],"5_6")) {
+          LP_CodeRate=FEC_5_6;
+        } else if (!strcmp(argv[i],"7_8")) {
+          LP_CodeRate=FEC_7_8;
+        } else {
+          fprintf(stderr,"Invalid Code Rate LP: %s\n",argv[i]);
+          exit(0);
+        }
+      } else if (strcmp(argv[i],"-hier")==0) {
+        i++;
+        if (!strcmp(argv[i],"AUTO")) {
+          hier=HIERARCHY_AUTO;
+        } else if (!strcmp(argv[i],"1")) {
+          hier=HIERARCHY_2;
+        } else if (!strcmp(argv[i],"4")) {
+          hier=HIERARCHY_4;
+        } else if (!strcmp(argv[i],"NONE")) {
+          hier=HIERARCHY_NONE;
+        } else {
+          fprintf(stderr,"Invalid HIERARCHY: %s\n",argv[i]);
+          exit(0);
+        }
       } else if (strcmp(argv[i],"-from")==0) {
         i++;
         if (map_cnt) {
@@ -723,12 +758,12 @@ int main(int argc, char **argv)
 
   if ( (freq>100000000)) {
     if (open_fe(&fd_frontend)) {
-      i=tune_it(fd_frontend,freq,srate,0,tone,specInv,diseqc,modulation,HP_CodeRate,TransmissionMode,guardInterval,bandWidth);
+      i=tune_it(fd_frontend,freq,srate,0,tone,specInv,diseqc,modulation,HP_CodeRate,TransmissionMode,guardInterval,bandWidth, LP_CodeRate, hier);
     }
   } else if ((freq!=0) && (pol!=0) && (srate!=0)) {
     if (open_fe(&fd_frontend)) {
       fprintf(stderr,"Tuning to %ld Hz\n",freq);
-      i=tune_it(fd_frontend,freq,srate,pol,tone,specInv,diseqc,modulation,HP_CodeRate,TransmissionMode,guardInterval,bandWidth);
+      i=tune_it(fd_frontend,freq,srate,pol,tone,specInv,diseqc,modulation,HP_CodeRate,TransmissionMode,guardInterval,bandWidth, LP_CodeRate, hier);
     }
   }
 

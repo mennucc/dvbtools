@@ -205,7 +205,7 @@ int check_status(int fd_frontend,int type, struct dvb_frontend_parameters* fepar
   return 0;
 }
 
-int tune_it(int fd_frontend, unsigned int freq, unsigned int srate, char pol, int tone, fe_spectral_inversion_t specInv, unsigned char diseqc,fe_modulation_t modulation,fe_code_rate_t HP_CodeRate,fe_transmit_mode_t TransmissionMode,fe_guard_interval_t guardInterval, fe_bandwidth_t bandwidth) {
+int tune_it(int fd_frontend, unsigned int freq, unsigned int srate, char pol, int tone, fe_spectral_inversion_t specInv, unsigned char diseqc,fe_modulation_t modulation,fe_code_rate_t HP_CodeRate,fe_transmit_mode_t TransmissionMode,fe_guard_interval_t guardInterval, fe_bandwidth_t bandwidth, fe_code_rate_t LP_CodeRate, fe_hierarchy_t hier) {
   int res, hi_lo, dfd;
   struct dvb_frontend_parameters feparams;
   struct dvb_frontend_info fe_info;
@@ -224,11 +224,11 @@ int tune_it(int fd_frontend, unsigned int freq, unsigned int srate, char pol, in
       feparams.inversion=INVERSION_OFF;
       feparams.u.ofdm.bandwidth=bandwidth;
       feparams.u.ofdm.code_rate_HP=HP_CodeRate;
-      feparams.u.ofdm.code_rate_LP=LP_CODERATE_DEFAULT;
+      feparams.u.ofdm.code_rate_LP=LP_CodeRate;
       feparams.u.ofdm.constellation=modulation;
       feparams.u.ofdm.transmission_mode=TransmissionMode;
       feparams.u.ofdm.guard_interval=guardInterval;
-      feparams.u.ofdm.hierarchy_information=HIERARCHY_DEFAULT;
+      feparams.u.ofdm.hierarchy_information=hier;
       fprintf(stderr,"tuning DVB-T (%s) to %d Hz, Bandwidth: %d\n",DVB_T_LOCATION,freq, 
 	bandwidth==BANDWIDTH_8_MHZ ? 8 : (bandwidth==BANDWIDTH_7_MHZ ? 7 : 6));
       break;
