@@ -31,7 +31,7 @@
 #include <ost/frontend.h>
 #include <ost/frontend.h>
 
-#include "dvb_defaults.h"
+#include "tune.h"
 
 int OSTSelftest(int fd)
 {
@@ -142,7 +142,7 @@ int SecGetStatus (int fd, struct secStatus *state)
     return 0;
 }
 
-int tune_it(int fd_frontend, int fd_sec, unsigned int freq, unsigned int srate, char pol, int tone, SpectralInversion specInv, unsigned int diseqc) {
+int tune_it(int fd_frontend, int fd_sec, unsigned int freq, unsigned int srate, char pol, int tone, SpectralInversion specInv, unsigned int diseqc,Modulation modulation,CodeRate HP_CodeRate,TransmitMode TransmissionMode,GuardInterval guardInterval, BandWidth bandWidth) {
   int i,res;
   int32_t strength;
   FrontendStatus festatus;
@@ -153,6 +153,19 @@ int tune_it(int fd_frontend, int fd_sec, unsigned int freq, unsigned int srate, 
   struct secStatus sec_state;
   FrontendInfo fe_info;
 
+  /* discard stale frontend events */
+  /*
+  pfd[0].fd = fd_frontend;
+  pfd[0].events = POLLIN;
+
+  if (poll(pfd,1,500)){
+    if (pfd[0].revents & POLLIN){
+      while (1) {
+        if (ioctl (fd_frontend, FE_GET_EVENT, &event) == -1) { break; }
+      }
+    }
+  }
+  */
   if ( (res = ioctl(fd_frontend,FE_GET_INFO, &fe_info) < 0)){
      perror("FE_GET_INFO: ");
      return -1;
@@ -164,15 +177,15 @@ int tune_it(int fd_frontend, int fd_sec, unsigned int freq, unsigned int srate, 
 
   switch(fe_info.type) {
     case FE_OFDM:
-      fprintf(stderr,"tuning DVB-T to %d\n",freq);
+      fprintf(stderr,"tuning DVB-T (%s) to %d\n",DVB_T_LOCATION,freq);
       feparams.Frequency=freq;
       feparams.Inversion=INVERSION_OFF;
-      feparams.u.ofdm.bandWidth=BANDWIDTH_DEFAULT;
-      feparams.u.ofdm.HP_CodeRate=HP_CODERATE_DEFAULT;
+      feparams.u.ofdm.bandWidth=bandWidth;
+      feparams.u.ofdm.HP_CodeRate=HP_CodeRate;
       feparams.u.ofdm.LP_CodeRate=LP_CODERATE_DEFAULT;
-      feparams.u.ofdm.Constellation=CONSTELLATION_DEFAULT;
-      feparams.u.ofdm.TransmissionMode=TRANSMISSION_MODE_DEFAULT;
-      feparams.u.ofdm.guardInterval=GUARD_INTERVAL_DEFAULT;
+      feparams.u.ofdm.Constellation=modulation;
+      feparams.u.ofdm.TransmissionMode=TransmissionMode;
+      feparams.u.ofdm.guardInterval=guardInterval;
       feparams.u.ofdm.HierarchyInformation=HIERARCHY_DEFAULT;
       break;
     case FE_QPSK:
