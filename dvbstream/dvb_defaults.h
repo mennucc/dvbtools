@@ -97,7 +97,7 @@
 #endif
 
 #if HIERARCHY_DEFAULT == HIERARCHY_NONE && !defined (LP_CODERATE_DEFAULT)
-#define LP_CODERATE_DEFAULT (0) /* unused if HIERARCHY_NONE */
+#define LP_CODERATE_DEFAULT (FEC_NONE) /* unused if HIERARCHY_NONE */
 #endif
 
 #endif
