@@ -110,8 +110,11 @@ uint64_t PTS=0;
 uint64_t USER_PTS=0;
 uint64_t audio_pts=0;
 uint64_t first_audio_pts=0;
+int audio_pts_wrap=0;
+int pts_wrap=0;
 uint64_t FIRST_PTS=0;
 int sub_count=0;
+int prev_PTS=0;
 
 typedef struct {
   unsigned char lang;
@@ -505,7 +508,12 @@ int process_pes_packet (unsigned char* buf,int n, int the_page) {
       p4=(buf[9]&0x08)>>3;
  
       PTS=p0|(p1<<8)|(p2<<16)|(p3<<24)|(p4<<32);
-      PTS=PTS/90;
+      if ((prev_PTS > (uint64_t)0x1ffff0000LL) && (PTS < (uint64_t)0x000100000LL)) {
+        pts_wrap=1;
+      }
+      if (pts_wrap) { PTS+=0x200000000LL; }
+      prev_PTS=PTS;
+      
       if (FIRST_PTS==0) { FIRST_PTS=PTS-USER_PTS; }
     } else {
       //fprintf(stdout,"stream_id=%02x, No PTS\n",stream_id);
@@ -550,7 +558,6 @@ int process_pes_packet (unsigned char* buf,int n, int the_page) {
 
 int main(int argc, char** argv) {
   unsigned char pesbuf[1265536];
-  uint64_t tmp_pts;
   int pes_format=0;
   int PES_packet_length;
   int i;
@@ -619,8 +626,6 @@ int main(int argc, char** argv) {
   }
 
   while ((PES_packet_length=read_pes_packet(0,the_pid,pesbuf,pes_format)) > 0) {
-    tmp_pts=get_pes_pts(pesbuf);
-
     process_pes_packet(pesbuf,PES_packet_length+6,the_page);
   }
   if (subformat==SUBFORMAT_XML) {

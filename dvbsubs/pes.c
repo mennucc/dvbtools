@@ -8,6 +8,7 @@
 #include "pes.h"
 
 extern uint64_t audio_pts,first_audio_pts;
+extern int audio_pts_wrap;
 extern uint16_t apid;
 
 ssize_t safe_read(int fd, unsigned char* buf, size_t count) {
@@ -21,6 +22,7 @@ char pts_text[30];
 char* pts2hmsu(uint64_t pts,char sep) {
   int h,m,s,u;
 
+  pts/=90; // Convert to milliseconds
   h=(pts/(1000*60*60));
   m=(pts/(1000*60))-(h*60);
   s=(pts/1000)-(h*3600)-(m*60);
@@ -45,7 +47,6 @@ uint64_t get_pes_pts (unsigned char* buf) {
     p4=(buf[9]&0x08)>>3;
 
     PTS=p0|(p1<<8)|(p2<<16)|(p3<<24)|(p4<<32);
-    PTS=PTS/90;
   } else {
     PTS=0;
   }
@@ -80,7 +81,12 @@ int read_pes_packet (int fd, uint16_t pid, uint8_t* buf, int vdrmode) {
           finished=1;
         } else if (stream_id==0xc0) {
           tmp_pts=get_pes_pts(buf);
-          //fprintf(stdout,"stream_id=%02x, PTS=%lld ms\n",stream_id,tmp_pts);
+          if (tmp_pts != 0) {
+            if ((audio_pts > (uint64_t)0x1ffff0000LL) && (tmp_pts < (uint64_t)0x000100000LL)) {
+              audio_pts_wrap=1;
+            }
+            if (audio_pts_wrap) { tmp_pts+=0x200000000LL; }
+          }
           if (tmp_pts > audio_pts) { audio_pts=tmp_pts; }
           if ((first_audio_pts==0) || ((tmp_pts!=0) && (tmp_pts < first_audio_pts))) { first_audio_pts=tmp_pts; }
         }
@@ -143,8 +149,13 @@ int read_pes_packet (int fd, uint16_t pid, uint8_t* buf, int vdrmode) {
               fprintf(stderr,"INFO: Found audio stream %d\n",apid);
             }
             if (apid==packet_pid) {
-              tmp_pts=get_pes_pts(&tsbuf[i]);
-//              fprintf(stderr,"Found Audio stream, PID=%d, PTS=%s\n",packet_pid,pts2hmsu(last_tmp_pts,'.'));
+              tmp_pts=get_pes_pts(buf);
+              if (tmp_pts != 0) {
+                if ((audio_pts > (uint64_t)0x1ffff0000LL) && (tmp_pts < (uint64_t)0x000100000LL)) {
+                  audio_pts_wrap=1;
+                }
+                if (audio_pts_wrap) { tmp_pts+=0x200000000LL; }
+              }
               if (tmp_pts > audio_pts) { audio_pts=tmp_pts; }
               if ((first_audio_pts==0) || ((tmp_pts!=0) && (tmp_pts < first_audio_pts))) { first_audio_pts=tmp_pts; }
             }

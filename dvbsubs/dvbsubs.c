@@ -65,6 +65,7 @@ int nibble_flag=0;
 int in_scanline=0;
 
 uint64_t video_pts,first_video_pts,audio_pts,first_audio_pts;
+int audio_pts_wrap=0;
 
 void init_data() {
   int i;
@@ -506,12 +507,15 @@ void save_png(unsigned char* filename) {
         count++;
         fprintf(stderr,"PNG: displaying region %d at %d,%d width=%d,height=%d\n",r,page.regions[r].x,page.regions[r].y,regions[r].width,regions[r].height);
 	out_y=page.regions[r].y*720;
+ for (v=0;v<16;v++) { fprintf(stderr,"Colour %c=dave r=%d, g=%d, b=%d\n",'0'+v,colours[regions[r].CLUT_id*48+v*3+0],colours[regions[r].CLUT_id*48+v*3+1],colours[regions[r].CLUT_id*48+v*3+2]); }
         for (y=0;y<regions[r].height;y++) {
           for (x=0;x<regions[r].width;x++) {
             v=regions[r].img[(y*regions[r].width)+x];
             if (v>0) { found=1; }
             bitmap.buffer[out_y+x+page.regions[r].x]=v+16*regions[r].CLUT_id;
+            fprintf(stderr,"%c",'.'+bitmap.buffer[out_y+x+page.regions[r].x]);
           }
+          fprintf(stderr,"\n");
           out_y+=720;
         }
       }
@@ -574,7 +578,7 @@ int main(int argc, char* argv[]) {
   PES_packet_length=read_pes_packet(fd,pid,buf,vdrmode);
 //  fprintf(stderr,"READ PES PACKET: length=%d\n",PES_packet_length);
   while (PES_packet_length >= 0) {
-    PTS=get_pes_pts(buf);
+    PTS=get_pes_pts(buf)/90;
     if (first_PTS==0) { first_PTS=PTS; }
 
     fprintf(stderr,"%s\r",pts2hmsu(PTS-first_PTS,'.'));
