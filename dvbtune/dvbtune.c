@@ -9,7 +9,7 @@
    Hotbird 13E: 10911v - srate 27500  ?? Doesn't work!
    Thor etc 1W: 11247v - srate 24500 (Most channels!)
 
-   Copyright (C) Dave Chapman 2001 
+   Copyright (C) Dave Chapman 2001-2004
   
    This program is free software; you can redistribute it and/or
    modify it under the terms of the GNU General Public License

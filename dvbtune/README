@@ -1,4 +1,4 @@
-DVBtune 0.4
+DVBtune 0.5
 -----------
 
 DVBtune is a simple tuning application for DVB cards supported by the
@@ -101,7 +101,7 @@ Changes to FINLAND DVB-T tuning, and dvb_defaults.h suggestion.
 Copyright
 ---------
 
-(C) Dave Chapman 2001,2002 <dave@dchapman.com> http://www.linuxstb.org
+(C) Dave Chapman 2001-2004 <dave@dchapman.com> http://www.linuxstb.org
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
