@@ -1,0 +1,30 @@
+mp2cut 
+------
+
+(C) Dave Chapman 2001.  Released under the GPL.
+
+INSTALLATION:
+
+Just type "make".
+
+USAGE:
+
+Remember: Each MPEG audio frame represents 0.024 seconds - i.e. there
+are just under 42 frames in one second.
+
+1) To print information on a file and test for corruption:
+
+mp2cut -t < infile.mp2
+
+2) To start playing at frame 102 using mpg123:
+
+mp2cut -s 102 < infile.mp2 | mpg123 -
+
+3) To play up to frame 8010:
+
+mp2cut -e 8010 < infile.mp2 | mpg123 -
+
+4) To cut frames 102 to 8010 from infile.mp2 to outfile.mp2
+
+mp2cut -s 102 -e 8010 < infile.mp2 | mpg123 -
+
