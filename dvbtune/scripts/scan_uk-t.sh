@@ -17,10 +17,10 @@ DVBTUNE=../dvbtune
 
 echo '<?xml version="1.0"?>'
 echo '<satellite>'
-$DVBTUNE -c $CARD -f 505833 -i
-$DVBTUNE -c $CARD -f 481833 -i
-$DVBTUNE -c $CARD -f 561833 -i
-$DVBTUNE -c $CARD -f 529833 -qam 16 -cr 3_4 -i
-$DVBTUNE -c $CARD -f 578166 -qam 16 -cr 3_4 -i
-$DVBTUNE -c $CARD -f 537833 -qam 16 -cr 3_4 -i
+$DVBTUNE -c $CARD -f 505833333 -qam 16 -cr 3_4 -i
+$DVBTUNE -c $CARD -f 481833333 -i
+$DVBTUNE -c $CARD -f 561833333 -i
+$DVBTUNE -c $CARD -f 529833333 -qam 16 -cr 3_4 -i
+$DVBTUNE -c $CARD -f 578166667 -qam 16 -cr 3_4 -i
+$DVBTUNE -c $CARD -f 537833333 -qam 16 -cr 3_4 -i
 echo '</satellite>'
