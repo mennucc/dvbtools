@@ -769,7 +769,7 @@ int main(int argc, char **argv)
     if (to_stdout) {
       fprintf(stderr,"Output to stdout\n");
     }
-    else {
+    else if(! map_cnt) {
       ttl = 2;
       fprintf(stderr,"Using %s:%d:%d\n",ipOut,portOut,ttl);
 
@@ -906,7 +906,7 @@ int main(int argc, char **argv)
   if (ns!=-1) close(ns);
   close(socketIn);
 
-  if (!to_stdout) close(socketOut);
+  if (!to_stdout && !map_cnt) close(socketOut);
   for (i=0;i<npids;i++) close(fd[i]);
   close(fd_dvr);
   close(fd_frontend);
