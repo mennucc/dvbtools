@@ -1,0 +1,97 @@
+rtptsaudio v0.2 - Dave Chapman <dave@dchapman.com>
+--------------------------------------------------
+
+INTRODUCTION
+
+rtptsaudio is a audio client for RTP-multicast MPEG-2 Transport
+Streams.  
+
+REQUIREMENTS
+
+rtptsaudio requires at least version 0.14.2b of libmad - a GPL'd mpeg
+audio decoder library.  It is available from:
+
+http://www.mars.org/home/rob/proj/mpeg/
+
+To install the library, use the following commands:
+
+./configure --enable-shared
+make
+su
+[Enter root password]
+make install
+
+You will also need access to a RTP-multicast "MPEG-2 Transport Stream".
+e.g. using dvbstream from http://www.linuxstb.org/dvbstream/
+
+INSTALLATION
+
+You can modify the IP address and port of the stream you want to
+receive in rtptsaudio.c
+
+Then type "make" to compile.  
+
+USAGE
+
+rtptsaudio [-ao audiotype] [-o filename] [-t secs] PID
+
+Options: -ao oss    Linux Open Sound System output (default)
+             mpa    Unprocessed MPEG Audio stream to stdout
+             raw    Raw PCM data (16 bit Little-Endian Stereo) to stdout
+         -o  file   Output filename or audio device (default=stdout)
+         -t  secs   Number of seconds to receive before quitting
+
+where PID is the PID of the audio stream you wish to play.  This can
+either be a radio station, or the audio stream of a TV station.  Only
+MPEG audio streams are supported (i.e. not AC3 as used by some TV
+broadcasters).
+
+You can run multiple instances of rtptsaudio on the same machine at
+the same time.  For example, if you wanted to play PID 643, and also
+record the unprocessed MPEG audio stream to a file, type the following
+two commands (in different terminals):
+
+rtptsaudio 643
+rtptsaudio -ao mpa -o recording.mp2 643
+
+If your CPU is fast enough, you can re-encode in real-time into MP3.
+For example, to use lame (www.mp3dev.org) to create a 128kbps MP3
+file, use the following command:
+
+rtptsaudio -ao mpa 643 | lame --mp2input - recording.mp3
+
+I have tested this using LAME version 3.91 and the process uses about
+20% of my 1GHz Pentium III CPU.
+
+
+ACKNOWLEDGEMENTS
+
+rtptsaudio uses a lot of code from the "mpegtools" package distributed
+with the linuxtv.org DVB driver.  This code is (C) 2000, 2001 Marcus
+Metzler for Convergence Integrated Media Gmbh and released under the
+GNU GPL.
+
+rtp.c is a slightly modified version of the sendrtp_ts.c file included
+with the "ts-rtp" package (also from linuxtv.org).  It was writen by
+David Podeur for Convergence Integrated Media Gmbh and released under
+the GNU GPL.
+
+The code to use libmad is based heavily on the "madlld" tutorial
+application written by Bertrand Petit.  It is available at
+http://www.bsd-dk.dk/~elrond/audio/madlld/
+
+COPYRIGHT NOTICE
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
