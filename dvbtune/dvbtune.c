@@ -1399,9 +1399,9 @@ int main(int argc, char **argv)
     netif.if_num = 0;  // always choosen the next free number
 
 #ifdef NEWSTRUCT
-    sprintf(devnamen,"/dev/ost/net%d",dev);
-#else
     sprintf(devnamen,"/dev/dvb/adapter%d/net0",dev);
+#else
+    sprintf(devnamen,"/dev/ost/net%d",dev);
 #endif
     //printf("Trying to open %s\n",devnamen);
     if((fdn = open(devnamen,O_RDWR|O_NONBLOCK)) < 0) {
