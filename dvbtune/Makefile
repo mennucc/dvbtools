@@ -3,6 +3,10 @@ CFLAGS= -Wall $(INCS)
 CC=gcc
 all: dvbtune
 
+ifdef NEWSTRUCT
+  CFLAGS += -DNEWSTRUCT
+endif
+
 ifdef UK
   CFLAGS += -DUK
 endif

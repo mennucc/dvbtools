@@ -47,6 +47,14 @@
 #include <unistd.h>
 
 // DVB includes:
+#ifdef NEWSTRUCT
+#include <linux/dvb/osd.h>
+#include <linux/dvb/dmx.h>
+#include <linux/dvb/frontend.h>
+#include <linux/dvb/video.h>
+#include <linux/dvb/audio.h>
+#include <linux/dvb/net.h>
+#else
 #include <ost/osd.h>
 #include <ost/dmx.h>
 #include <ost/sec.h>
@@ -54,6 +62,7 @@
 #include <ost/video.h>
 #include <ost/audio.h>
 #include <ost/net.h>
+#endif
 
 #include "tune.h"
 
@@ -71,10 +80,16 @@ int card=0;
 SpectralInversion specInv = INVERSION_AUTO;
 int tone = -1;
 
+#ifdef NEWSTRUCT
+char* frontenddev[4]={"/dev/dvb/adapter0/frontend0","/dev/dvb/adapter1/frontend0","/dev/dvb/adapter2/frontend0","/dev/dvb/adapter3/frontend0"};
+char* dvrdev[4]={"/dev/dvb/adapter0/dvr0","/dev/dvb/adapter1/dvr0","/dev/dvb/adapter2/dvr0","/dev/dvb/adapter3/dvr0"};
+char* demuxdev[4]={"/dev/dvb/adapter0/demux0","/dev/dvb/adapter1/demux0","/dev/dvb/adapter2/demux0","/dev/dvb/adapter3/demux0"};
+#else
 char* frontenddev[4]={"/dev/ost/frontend0","/dev/ost/frontend1","/dev/ost/frontend2","/dev/ost/frontend3"};
 char* dvrdev[4]={"/dev/ost/dvr0","/dev/ost/dvr1","/dev/ost/dvr2","/dev/ost/dvr3"};
 char* secdev[4]={"/dev/ost/sec0","/dev/ost/sec1","/dev/ost/sec2","/dev/ost/sec3"};
 char* demuxdev[4]={"/dev/ost/demux0","/dev/ost/demux1","/dev/ost/demux2","/dev/ost/demux3"};
+#endif
 
 typedef struct _transponder_t {
   int id;
@@ -1215,9 +1230,11 @@ int main(int argc, char **argv)
                 FEReadUncorrectedBlocks(fd_frontend, &uncorr);
                 ioctl(fd_frontend,FE_READ_STATUS,&festatus);
                 fprintf(stderr,"Signal=%d, Verror=%d, SNR=%ddB, BlockErrors=%d, (", strength, ber, snr, uncorr);
+#ifndef NEWSTRUCT
 		if (festatus & FE_HAS_POWER) fprintf(stderr,"P|");
-		if (festatus & FE_HAS_SIGNAL) fprintf(stderr,"S|");
 		if (festatus & FE_SPECTRUM_INV) fprintf(stderr,"I|");
+#endif
+		if (festatus & FE_HAS_SIGNAL) fprintf(stderr,"S|");
 		if (festatus & FE_HAS_LOCK) fprintf(stderr,"L|");
 		if (festatus & FE_HAS_CARRIER) fprintf(stderr,"C|");
 		if (festatus & FE_HAS_VITERBI) fprintf(stderr,"V|");
@@ -1247,6 +1264,7 @@ int main(int argc, char **argv)
       return -1;
   }
 
+#ifndef NEWSTRUCT
   /* Only open sec for DVB-S tuning */
   if (freq<100000000) {
     if((fd_sec = open(secdev[card],O_RDWR)) < 0) {
@@ -1254,6 +1272,7 @@ int main(int argc, char **argv)
         perror("SEC DEVICE (warning) ");
     }
   }
+#endif
 
   if((fd_demuxrec = open(demuxdev[card],O_RDWR|O_NONBLOCK)) < 0){
       fprintf(stderr,"FD %i: ",i);
@@ -1357,7 +1376,7 @@ int main(int argc, char **argv)
     if((fdn = open(devnamen,O_RDWR|O_NONBLOCK)) < 0) {
       fprintf(stderr, "Failed to open DVB NET DEVICE");
       close(fd_frontend);
-      close(fd_sec);
+      if (fd_sec) close(fd_sec);
     } else {
       // Add the network interface
       ioctl( fdn,NET_ADD_IF,&netif);
