@@ -1,10 +1,11 @@
 CC=gcc
 OBJS=dvbsubs dvbtextsubs xml2spumux xml2srt
+MANPAGES=dvbtextsubs.1
 CFLAGS+=-Wall
 
 INCS+=-I/usr/include/libxml2 -I/usr/include/freetype2
 
-all: $(OBJS)
+all: $(OBJS) $(MANPAGES)
 
 dvbsubs: dvbsubs.c dvbsubs.h bitmap.o pes.o
 	$(CC) $(INCS) $(CFLAGS) -o dvbsubs dvbsubs.c bitmap.o pes.o -lpng -lm -lz
@@ -28,5 +29,8 @@ xml2srt: xml2srt.xslt xml2srt.sh
 	cat xml2srt.sh xml2srt.xslt > xml2srt
 	chmod +x xml2srt
 
+dvbtextsubs.1: dvbtextsubs.pod
+	pod2man --section 1 --release 0.3 --center dvbsubs dvbtextsubs.pod > dvbtextsubs.1
+
 clean:
-	rm -f  *.o *~ $(OBJS)
+	rm -f  *.o *~ $(OBJS) $(MANPAGES)
