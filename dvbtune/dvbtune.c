@@ -697,7 +697,7 @@ int scan_nit(int x) {
 
   ufd.fd=fd_nit;
   ufd.events=POLLPRI;
-  if (poll(&ufd,1,5000) < 0 ) {
+  if (poll(&ufd,1,10000) < 0 ) {
     fprintf(stderr,"TIMEOUT on read from fd_nit\n");
     close(fd_nit);
     return -1;
@@ -776,7 +776,7 @@ void scan_pmt(int pid,int sid,int change) {
 
   ufd.fd=fd_pmt;
   ufd.events=POLLPRI;
-  if (poll(&ufd,1,2000) < 0) {
+  if (poll(&ufd,1,10000) < 0) {
      fprintf(stderr,"TIMEOUT reading from fd_pmt\n");
      close(fd_pmt);
      return;
@@ -864,7 +864,7 @@ void scan_pat() {
 
   ufd.fd=fd_pat;
   ufd.events=POLLPRI;
-  if (poll(&ufd,1,2000) < 0) {
+  if (poll(&ufd,1,10000) < 0) {
      fprintf(stderr,"TIMEOUT reading from fd_pat\n");
      close(fd_pat);
      return;
