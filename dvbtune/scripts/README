@@ -1,0 +1,14 @@
+This directory contains some example scripts to produce full XML files
+for various satellites and DVB-T transmitters.
+
+check.sh   - Read a list of satellite transponders (freq, pol, srate) and 
+             create an XML file containing the details for all transponders.
+             A transponder list for Astra 19 is included.
+
+scan_uk-t.sh Scan the UK Crystal Palace transmitter for channels.  Change the
+             frequencies in this script for your local DVB-T transmitter.
+             (see the links at http://www.linuxstb.org/dvb-t/
+
+Please send any scripts to dave@dchapman.com for inclusion in future
+releases.
+

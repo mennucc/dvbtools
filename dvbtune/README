@@ -1,0 +1,105 @@
+DVBtune 0.4
+-----------
+
+DVBtune is a simple tuning application for DVB cards supported by the
+Linux DVB driver (www.linuxtv.org).
+
+This is still very experimental - especially the XML output.
+
+The latest version can be found at www.linuxstb.org.  You can contact
+the author at <dave@dchapman.com>.
+
+Installation
+------------
+
+The package includes two applications - dvbtune and xml2vdr.
+
+dvbtune has the option to dump the metadata from a DVB
+transponder/multiplex into an XML file.  This XML file is hopefully
+self-explanatory (i.e. I am too lazy to write documentation for it),
+and should be read in conjunction with the DVB-SI standard (EN 300
+468) available from www.etsi.org.
+
+xml2vdr can convert this XML file into a "channels.conf" file suitable
+for use with the VDR application.
+
+In order to use the included "xml2vdr" utility, you should install the
+latest version of libxml (Version 2) from www.xmlsoft.org.  I would
+recommend getting the very last ".tar.gz" source version and install
+using the standard 
+
+./configure
+make
+make install
+
+set of commands.
+
+Once you have installed libxml (if required), then you can compile
+dvbtune and xml2vdr by just typing "make" in the dvbtune directory.
+
+Usage
+-----
+
+Just type "dvbtune" by itself for the full list of options.
+
+For simple tuning operations you can just use:
+
+./dvbtune -f 12188000 -p h -s 27500 -v 163 -a 104 -t 32
+
+to tune to a satellite transponder and set the video, audio and
+teletext PIDs.
+
+dvbtune also support DVB-T reception (currently for the UK only).  In
+this case, you just need to specify the frequency:
+
+./dvbtune -f 481833000
+
+To get the DVB SI information for a multiplex, you can use the "-i"
+option.  The output of dvbtune needs some addition lines before it is
+a valid XML file.  e.g. use a script containing
+
+echo '<?xml version="1.0" encoding="iso-8859-1" ?>' > test.xml
+echo '<satellite>' >> test.xml
+./dvbtune -f freq -s srate -p pol -i  >> test.xml
+echo '</satellite>' >> test.xml
+
+to dump the SI for a satellite transponder.
+
+This was done to allow you to write scripts to scan multiple
+transponders and write the output to the same XML file.  See the
+"scripts" subdirectory for examples.
+
+Contributors
+------------
+
+Hilmar Linder - January 2002:
+
+Added Switch -n that adds a network interface and switch -m that
+monitors the reception quality. Changed the tuning code. Added command
+line parameters for spectral inversion. Changed code to allow L-Band
+frequencies with -f switch
+   
+John Williams - March 2002.
+
+Added -D diseqc support, and made the 22kHz tone automatic again.
+
+
+Copyright
+---------
+
+(C) Dave Chapman 2001,2002 <dave@dchapman.com> http://www.linuxstb.org
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+    
