@@ -35,6 +35,8 @@
 
 unsigned char buf[100000];
 int i=0;
+int nibble_flag=0;
+int in_scanline=0;
 
 ssize_t safe_read(int fd, void *buf, size_t count) {
  ssize_t n,tot;
@@ -62,16 +64,128 @@ void set_filt(int fd,uint16_t tt_pid, dmxPesType_t t)
 		perror("DMX SET PES FILTER:");
 }
 
+unsigned char next_nibble () {
+  unsigned char x;
+
+  if (nibble_flag==0) {
+    x=(buf[i]&0xf0)>>4;
+    nibble_flag=1;
+  } else {
+    x=(buf[i++]&0x0f);
+    nibble_flag=0;
+  }
+  return(x);
+}
+
+void decode_4bit_pixel_code_string(int n) {
+  int next_bits,
+      switch_1,
+      switch_2,
+      switch_3,
+      run_length,
+      pixel_code;
+
+  int bits;
+  unsigned int data;
+  int j;
+
+  if (in_scanline==0) {
+    printf("<scanline>\n");
+    in_scanline=1;
+  }
+  nibble_flag=0;
+  j=i+n;
+  while(i < j) {
+//    printf("start of loop, i=%d, nibble-flag=%d\n",i,nibble_flag);
+//    printf("buf=%02x %02x %02x %02x\n",buf[i],buf[i+1],buf[i+2],buf[i+3]);
+
+    bits=0;
+    next_bits=next_nibble();
+
+    if (next_bits!=0) {
+      pixel_code=next_bits;
+      printf("<pixel run_length=\"1\" pixel_code=\"%d\" />\n",pixel_code);
+      bits+=4;
+    } else {
+      bits+=4;
+      data=next_nibble();
+      switch_1=(data&0x08)>>3;
+      bits++;
+      if (switch_1==0) {
+        run_length=(data&0x07);
+        bits+=3;
+        if (run_length!=0) {
+          printf("<pixel run_length=\"%d\" pixel_code=\"0\" />\n",run_length+2);
+        } else {
+//          printf("end_of_string - run_length=%d\n",run_length);
+          break;
+        }
+      } else {
+        switch_2=(data&0x04)>>2;
+        bits++;
+        if (switch_2==0) {
+          run_length=(data&0x03);
+          bits+=2;
+          pixel_code=next_nibble();
+          bits+=4;
+          printf("<pixel run_length=\"%d\" pixel_code=\"%d\" />\n",run_length+4,pixel_code);
+        } else {
+          switch_3=(data&0x03);
+          bits+=2;
+          switch (switch_3) {
+            case 0: printf("<pixel run_length=\"1\" pixel_code=\"0\" />\n");
+                    break;
+            case 1: printf("<pixel run_length=\"2\" pixel_code=\"0\" />\n");
+                    break;
+            case 2: run_length=next_nibble();
+                    bits+=4;
+                    pixel_code=next_nibble();
+                    bits+=4;
+                    printf("<pixel run_length=\"%d\", pixel_code=\"%d\" />\n",run_length+9,pixel_code);
+                    break;
+            case 3: run_length=next_nibble();
+                    run_length=(run_length<<4)|next_nibble();
+                    bits+=8;
+                    pixel_code=next_nibble();
+                    bits+=4;
+                    printf("<pixel run_length=\"%d\" pixel_code=\"%d\" />\n",run_length+25,pixel_code);
+          }
+        }
+      }
+    }
+
+//    printf("used %d bits\n",bits);
+  }
+  if (nibble_flag==1) {
+    i++;
+    nibble_flag=0;
+  }
+}
+
+
 void process_pixel_data_sub_block(int n) {
   int data_type;
+  int j;
 
-  data_type=buf[i];
+  j=i+n;
 
-  printf("<data_type>%02x</data_type>\n",data_type);
+//  printf("process_pixel_data: %02x %02x %02x %02x %02x %02x\n",buf[i],buf[i+1],buf[i+2],buf[i+3],buf[i+4],buf[i+5]);
+  while (i < j) {
+    data_type=buf[i++];
 
-//  printf("buf=%02x %02x %02x %02x %02x\n",buf[i],buf[i+1],buf[i+2],buf[i+3],buf[i+4]);
+//    printf("<data_type>%02x</data_type>\n",data_type);
 
-  i+=n;
+    switch(data_type) {
+      case 0x11: decode_4bit_pixel_code_string(n-1);
+                 break;
+      case 0xf0: printf("</scanline>\n");
+                 in_scanline=0;
+                 break;
+      default: fprintf(stderr,"unimplemented data_type %02x in pixel_data_sub_block\n",data_type);
+    }
+  }
+
+  i=j;
 }
 void process_page_composition_segment() {
   int segment_type,
@@ -299,10 +413,11 @@ void process_object_data_segment() {
     top_field_data_block_length=(buf[i]<<8)|buf[i+1]; i+=2;
     bottom_field_data_block_length=(buf[i]<<8)|buf[i+1]; i+=2;
 
-    printf("<pixel_data_sub_block length=\"0x%04x\"/>\n",top_field_data_block_length);
+    printf("<pixel_data_sub_block type=\"top\" length=\"0x%04x\"/>\n",top_field_data_block_length);
+
     process_pixel_data_sub_block(top_field_data_block_length);
 
-    printf("<pixel_data_sub_block length=\"0x%04x\"/>\n",bottom_field_data_block_length);
+    printf("<pixel_data_sub_block type=\"bottom\" length=\"0x%04x\"/>\n",bottom_field_data_block_length);
     process_pixel_data_sub_block(bottom_field_data_block_length);
   }
   printf("</object_data_segment>\n");
