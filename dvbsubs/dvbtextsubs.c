@@ -327,7 +327,7 @@ void print_subviewer(FILE* fd, subtitle_t* subtitle) {
           if (colour==-1) {
             colour=7; // fprintf(fd,"<%s>",colours[colour]);
           }
-          xml_output_char(fd,vtx2iso8559_1_table[subtitle->lang][ch-32]);
+          fprintf(fd,"%c",vtx2iso8559_1_table[subtitle->lang][ch-32]);
           j=1;
         }
       } else {
