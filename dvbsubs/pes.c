@@ -8,6 +8,7 @@
 #include "pes.h"
 
 extern uint64_t audio_pts,first_audio_pts;
+extern uint16_t apid;
 
 ssize_t safe_read(int fd, unsigned char* buf, size_t count) {
   ssize_t n;
@@ -100,20 +101,20 @@ int read_pes_packet (int fd, uint16_t pid, uint8_t* buf, int vdrmode) {
   
       packet_pid=(((tsbuf[1]&0x1f)<<8) | tsbuf[2]);
   
+      adaption_field_control=(tsbuf[3]&0x30)>>4;
+      discontinuity_indicator=0;
+      if (adaption_field_control==3) {
+        adaption_field_length=tsbuf[4]+1;
+      } else if (adaption_field_control==2) {
+        adaption_field_length=183+1;
+      } else {
+        adaption_field_length=0;
+      }
+      i=4+adaption_field_length;
+      ts_payload=184-adaption_field_length;
+  
       if (packet_pid==pid) {
   //      fprintf(stderr,"Read %d bytes from pid %d, synced=%d\n",count,pid,synced); 
-        adaption_field_control=(tsbuf[3]&0x30)>>4;
-        discontinuity_indicator=0;
-        if (adaption_field_control==3) {
-          adaption_field_length=tsbuf[4]+1;
-        } else if (adaption_field_control==2) {
-          adaption_field_length=183+1;
-        } else {
-          adaption_field_length=0;
-        }
-        i=4+adaption_field_length;
-        ts_payload=184-adaption_field_length;
-  
         if (!synced) {
           if (tsbuf[1]&0x40) {
             if ((tsbuf[i]==0x00) && (tsbuf[i+1]==0x00) && (tsbuf[i+2]==0x01)) {
@@ -132,6 +133,23 @@ int read_pes_packet (int fd, uint16_t pid, uint8_t* buf, int vdrmode) {
           n+=ts_payload;
         }
         if ((synced) && (n >= PES_packet_length)) { finished=1; }
+      } else {
+        if ((tsbuf[1]&0x40) && (tsbuf[i]==0x00) && (tsbuf[i+1]==0x00) && (tsbuf[i+2]==0x01)) {
+          stream_id=tsbuf[i+3];
+
+          if (stream_id==0xc0) {
+            if (apid==0) { 
+              apid=packet_pid;
+              fprintf(stderr,"INFO: Found audio stream %d\n",apid);
+            }
+            if (apid==packet_pid) {
+              tmp_pts=get_pes_pts(&tsbuf[i]);
+//              fprintf(stderr,"Found Audio stream, PID=%d, PTS=%s\n",packet_pid,pts2hmsu(last_tmp_pts,'.'));
+              if (tmp_pts > audio_pts) { audio_pts=tmp_pts; }
+              if ((first_audio_pts==0) || ((tmp_pts!=0) && (tmp_pts < first_audio_pts))) { first_audio_pts=tmp_pts; }
+            }
+          }
+        }
       }
     }
   }

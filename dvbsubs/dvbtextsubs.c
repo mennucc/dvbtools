@@ -63,6 +63,9 @@ The DVB stream must be piped to dvbtextsubs.  e.g.:\n\n\
 or: dvbtextsubs 2320 888 < file.ts > output.xml\n\n\
 Options: -srt      Output subtitles in Subviewer format\n\
          -pts      PTS offset (in ms) to add to every PTS in output file\n\
+         -apts     Use audio PTS timestamps instead of Teletext PTS\n\
+                   (for broadcasters that broadcast no or incorrect teletext PTS)\n\
+         -apid     Audio PID (for transport streams processed with -apts option)\n\
          -keeppts  Output original PTS values (do not offset from start of file)\n\n"
 
 typedef enum {
@@ -75,6 +78,8 @@ subformat_t subformat;
 int debug=0;
 int no_pts_warning=0;
 int keeppts=0;
+uint16_t apid=0;
+int use_apts=0;
 
 /* Structure of Transport Stream (from ISO/IEC 13818-1):
 
@@ -491,7 +496,7 @@ int process_pes_packet (unsigned char* buf,int n, int the_page) {
 
   if ((stream_id==0xbd) && ((buf[buf[8]+9]>=0x10) && (buf[buf[8]+9]<=0x1f))) {
     PTS_DTS_flags=(buf[7]&0xb0)>>6;
-    if (PTS_DTS_flags==0x02) {
+    if ((PTS_DTS_flags==0x02) && (!use_apts)) {
       // PTS is in bytes 9,10,11,12,13
       p0=(buf[13]&0xfe)>>1|((buf[12]&1)<<7);
       p1=(buf[12]&0xfe)>>1|((buf[11]&2)<<6);
@@ -504,9 +509,10 @@ int process_pes_packet (unsigned char* buf,int n, int the_page) {
       if (FIRST_PTS==0) { FIRST_PTS=PTS-USER_PTS; }
     } else {
       //fprintf(stdout,"stream_id=%02x, No PTS\n",stream_id);
-      if (no_pts_warning==0) {
+      if ((no_pts_warning==0) && (!use_apts)) {
         fprintf(stderr,"WARNING: No PTS value in teletext packet - using audio PTS.\n");
         fprintf(stderr,"First audio PTS=%lld ms\n",first_audio_pts);
+        use_apts=1;
         no_pts_warning=1;
       }
       PTS=audio_pts;
@@ -577,6 +583,10 @@ int main(int argc, char** argv) {
         subformat=SUBFORMAT_SUBVIEWER;
       } else if (strcmp(argv[i],"-keeppts")==0) {
         keeppts=1;
+      } else if (strcmp(argv[i],"-apts")==0) {
+        use_apts=1;
+      } else if (strcmp(argv[i],"-apid")==0) {
+        apid=atoi(argv[i]);
       } else if (strcmp(argv[i],"-pts")==0) {
         i++;
         USER_PTS=atoi(argv[i]);

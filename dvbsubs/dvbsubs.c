@@ -47,7 +47,7 @@ page_t page;
 region_t regions[MAX_REGIONS];
 uint8_t colours[256*3];
 uint8_t trans[256];
-
+uint16_t apid;
 int y=0;
 int x=0;
 
