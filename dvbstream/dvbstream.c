@@ -322,12 +322,8 @@ int process_telnet() {
               if (cmd[i]!=0) {
                 while (cmd[i]==' ') i++;
                 srate=atoi(&cmd[i])*1000UL;
-                if (open_fe(&fd_frontend,&fd_sec)) {
-                  fprintf(stderr,"Tuning to %ld,%ld,%c\n",freq,srate,pol);
-                  tune_it(fd_frontend,fd_sec,freq,srate,pol,tone,specInv,diseqc,modulation,HP_CodeRate,TransmissionMode,guardInterval,bandWidth);
-                  close(fd_frontend);
-                  if (fd_sec) close(fd_sec);
-                }
+                fprintf(stderr,"Tuning to %ld,%ld,%c\n",freq,srate,pol);
+                tune_it(fd_frontend,fd_sec,freq,srate,pol,tone,specInv,diseqc,modulation,HP_CodeRate,TransmissionMode,guardInterval,bandWidth);
               }
             }
           }
@@ -625,13 +621,10 @@ int main(int argc, char **argv)
   if ( (freq>100000000)) {
     if (open_fe(&fd_frontend,0)) {
       i=tune_it(fd_frontend,0,freq,srate,0,tone,specInv,diseqc,modulation,HP_CodeRate,TransmissionMode,guardInterval,bandWidth);
-      close(fd_frontend);
     }
   } else if ((freq!=0) && (pol!=0) && (srate!=0)) {
     if (open_fe(&fd_frontend,&fd_sec)) {
       i=tune_it(fd_frontend,fd_sec,freq,srate,pol,tone,specInv,diseqc,modulation,HP_CodeRate,TransmissionMode,guardInterval,bandWidth);
-      close(fd_frontend);
-      if (fd_sec) close(fd_sec);
     }
   }
 
@@ -764,5 +757,7 @@ int main(int argc, char **argv)
   if (!to_stdout) close(socketOut);
   for (i=0;i<npids;i++) close(fd[i]);
   close(fd_dvr);
+  close(fd_frontend);
+  if (fd_sec) close(fd_sec);
   return(0);
 }
