@@ -212,11 +212,10 @@ static int do_diseqc(int secfd, int sat_no, int pol, int hi_lo)
    return 1;
 }
 
-int check_status(int fd_frontend,struct dvb_frontend_parameters* feparams,int tone) {
+int check_status(int fd_frontend,struct dvb_frontend_info fe_info, struct dvb_frontend_parameters* feparams,int tone) {
   int32_t strength;
   fe_status_t festatus;
   struct dvb_frontend_event event;
-  struct dvb_frontend_info fe_info;
   struct pollfd pfd[1];
   int status;
 
@@ -290,12 +289,11 @@ int check_status(int fd_frontend,struct dvb_frontend_parameters* feparams,int to
   return 0;
 }
 #else
-int check_status(int fd_frontend,FrontendParameters* feparams,int tone) {
+int check_status(int fd_frontend,FrontendInfo fe_info, FrontendParameters* feparams,int tone) {
   int i,res;
   int32_t strength;
   fe_status_t festatus;
   FrontendEvent event;
-  FrontendInfo fe_info;
   struct pollfd pfd[1];
 
   i = 0; res = -1;
@@ -593,5 +591,5 @@ if (diseqc==0) if (ioctl(fd_frontend,FE_SET_VOLTAGE,voltage) < 0) {
   if (fd_sec) SecGetStatus(fd_sec, &sec_state);
 #endif
 
-  return(check_status(fd_frontend,&feparams,tone));
+  return(check_status(fd_frontend,fe_info,&feparams,tone));
 }
