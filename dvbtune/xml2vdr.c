@@ -42,7 +42,7 @@ char service_name[256];
 char provider_name[256];
 int freq;
 char pol;
-int diseqc=0;
+char diseqc[]="S28.2E";
 int srate;
 int vpid;
 int apid[256];
@@ -218,7 +218,7 @@ static void xmlsat_EndElement(xmlsatParseState *state, const char *name) {
     in_audio_stream=0;
   } else if (strcmp(name,"canal_radio")==0) {
 //     if (ca==0) printf("%s:RADIO:%s:%d:%c:%d:%d:%d:%d:%d:%d:%d\n",provider_name,service_name,freq,pol,diseqc,srate,vpid,apid[0],tpid,ca,pnr);
-    if ((ca==0) || (fta==0)) printf("%s (RADIO):%d:%c:%d:%d:%d:%d:%d:%d:%d\n",service_name,freq,pol,diseqc,srate,vpid,apid[0],tpid,ca,pnr);
+    if ((ca==0) || (fta==0)) printf("%s (RADIO):%d:%c:%s:%d:%d:%d:%d:%d:%d\n",service_name,freq,pol,diseqc,srate,vpid,apid[0],tpid,ca,pnr);
      n_apids=0;
      n_ca=0;
   } else if (strcmp(name,"service")==0) {
@@ -227,8 +227,8 @@ static void xmlsat_EndElement(xmlsatParseState *state, const char *name) {
      if ((ignore_service==0) && ((type==1) || (type==2) || (type==155))) {  // TV or Radio or DishNetwork TV
        /* Only print service if at least 1 PID is non-zero */
        if (((ca==0) || (fta==0)) && (((vpid!=0) || (n_apids>0) || (tpid!=0)))) {
-//         printf("%s:%s:%s:%d:%c:%d:%d:%d:",provider_name,((vpid==0) ? "RADIO" : "TV"),service_name,freq,pol,diseqc,srate,vpid);
-         printf("%s (%s):%d:%c:%d:%d:%d:",service_name,((vpid==0) ? "RADIO" : "TV"),freq,pol,diseqc,srate,vpid);
+//         printf("%s:%s:%s:%d:%c:%s:%d:%d:",provider_name,((vpid==0) ? "RADIO" : "TV"),service_name,freq,pol,diseqc,srate,vpid);
+         printf("%s (%s):%d:%c:%s:%d:%d:",service_name,((vpid==0) ? "RADIO" : "TV"),freq,pol,diseqc,srate,vpid);
          x=0;
          for (i=0;i<n_apids;i++) {
            if (!is_ac3[i]) { 
@@ -275,7 +275,6 @@ static void xmlsat_EndElement(xmlsatParseState *state, const char *name) {
   } else if (strcmp(name,"transponder")==0) {
     freq=0;
     pol=0;
-    diseqc=0;
     srate=0;
   }
 }
