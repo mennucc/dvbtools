@@ -955,7 +955,7 @@ void scan_sdt() {
 for (k=0;k<max_k;k++) {
  ufd.fd=fd_sdt;
  ufd.events=POLLPRI;
- if (poll(&ufd,1,2000) < 0 ) {
+ if (poll(&ufd,1,10000) < 0 ) {
    fprintf(stderr,"TIMEOUT on read from fd_sdt\n");
    close(fd_sdt);
    return;
