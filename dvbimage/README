@@ -16,6 +16,7 @@ DVBimage is a program to display still images on a DVB card.  It is
 designed to be used as an Internet webcam viewer.
 
 The latest version can be found at http://www.linuxstb.org/dvbimage/
+or via CVS at http://sourceforge.net/projects/dvbtools/
 
 USAGE
 -----
