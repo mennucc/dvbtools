@@ -130,7 +130,6 @@ static void SignalHandler(int signum) {
   if (signum == SIGALRM) {
     gettimeofday(&tv,(struct timezone*) NULL);
     now=tv.tv_sec-real_start_time;
-    //    fprintf(stderr,"now=%ld\n",now);
     alarm(ALARM_TIME);
   } else if (signum != SIGPIPE) {
     Interrupted=signum;
@@ -430,6 +429,7 @@ typedef struct {
   int fd;
   int pids[MAX_CHANNELS];
   int num;
+  int pid_cnt;
   long start_time; // in seconds
   long end_time;   // in seconds
 } pids_map_t;
@@ -445,7 +445,7 @@ int main(int argc, char **argv)
   int i,j;
   unsigned char buf[MTU];
   struct pollfd pfds[2];  // DVR device and Telnet connection
-  unsigned int secs = 0;
+  unsigned int secs = -1;
   unsigned long freq=0;
   unsigned long srate=0;
   int count;
@@ -460,6 +460,7 @@ int main(int argc, char **argv)
   long start_time=-1;
   long end_time=-1;
   struct timeval tv;
+  int found;
 
   /* Output: {uni,multi,broad}cast socket */
   char ipOut[20];
@@ -523,7 +524,7 @@ int main(int argc, char **argv)
       } else if (strcmp(argv[i],"-analyse")==0) {
         do_analyse=1;
         output_type=RTP_NONE;
-        if (secs==0) { secs=10; }
+        if (secs==-1) { secs=10; }
       } else if (strcmp(argv[i],"-i")==0) {
         i++;
         strcpy(ipOut,argv[i]);
@@ -633,103 +634,93 @@ int main(int argc, char **argv)
       } else if (strcmp(argv[i],"-from")==0) {
         i++;
         if (map_cnt) {
-          pids_map[map_cnt-1].start_time=atoi(argv[i]);
+          pids_map[map_cnt-1].start_time=atoi(argv[i])*60;
         } else {
-          start_time=atoi(argv[i]);
+          start_time=atoi(argv[i])*60;
         }
       } else if (strcmp(argv[i],"-to")==0) {
         i++;
         if (map_cnt) {
-          pids_map[map_cnt-1].end_time=atoi(argv[i]);
+          pids_map[map_cnt-1].end_time=atoi(argv[i])*60;
         } else {
-          end_time=atoi(argv[i]);
+          end_time=atoi(argv[i])*60;
         }
       } else if (strstr(argv[i], "-o:")==argv[i]) {
         if (strlen(argv[i]) > 3) {
-          int pid_cnt = 0, pid, j;
-
+          fprintf(stderr,"Processing %s\n",argv[i]);
           map_cnt++;
           pids_map = (pids_map_t*) realloc(pids_map, sizeof(pids_map_t) * map_cnt);
+          pids_map[map_cnt-1].pid_cnt = 0;
           pids_map[map_cnt-1].start_time=start_time;
           pids_map[map_cnt-1].end_time=end_time;
           for(j=0; j < MAX_CHANNELS; j++) pids_map[map_cnt-1].pids[j] = -1;
           pids_map[map_cnt-1].filename = (char *) malloc(strlen(argv[i]) - 2);
           strcpy(pids_map[map_cnt-1].filename, &argv[i][3]);
-          i++;
 
-          while(i < argc) {
-            int found;
-            if (sscanf(argv[i], "%d", &pid) == 0) {
-              i--;
-              break;
-            }
-
-            // block for the map
-            found = 0;
-            for (j=0;j<MAX_CHANNELS;j++) {
-              if(pids_map[map_cnt-1].pids[j] == pid) found = 1;
-            }
-            if (found == 0) {
-              pids_map[map_cnt-1].pids[pid_cnt] = pid;
-              pid_cnt++;
-            }
-
-            // block for the list of pids to demux
-            found = 0;
-            for (j=0;j<npids;j++) {
-              if(pids[j] == pid) found = 1;
-            }
-            if (found==0) {
-              pestypes[npids] = DMX_PES_OTHER;
-              pids[npids++] = pid;
-            }
-            i++;
-          }
-
-          if (pid_cnt > 0) {
-             FILE *f;
-             f = fopen(pids_map[map_cnt-1].filename, "w+b");
-             if (f != NULL) {
-               pids_map[map_cnt-1].fd = fileno(f);
-               make_nonblock(pids_map[map_cnt-1].fd);
-               fprintf(stderr, "Open file %s\n", pids_map[map_cnt-1].filename);
-             } else {
-               pids_map[map_cnt-1].fd = -1;
-               fprintf(stderr, "Couldn't open file %s, errno:%d\n", pids_map[map_cnt-1].filename, errno);
-             }
-	   }
-           output_type = MAP_TS;
-          }
+          output_type = MAP_TS;
+        }
+      } else {
+        if ((ch=(char*)strstr(argv[i],":"))!=NULL) {
+          pid2=atoi(&ch[1]);
+          ch[0]=0;
         } else {
-          if ((ch=(char*)strstr(argv[i],":"))!=NULL) {
-            pid2=atoi(&ch[1]);
-            ch[0]=0;
-          } else {
-            pid2=-1;
+          pid2=-1;
+        }
+        pid=atoi(argv[i]);
+
+        // If we are currently processing a "-o:" option:
+        if (map_cnt) {
+          // block for the map
+          found = 0;
+          for (j=0;j<MAX_CHANNELS;j++) {
+            if(pids_map[map_cnt-1].pids[j] == pid) found = 1;
           }
-          pid=atoi(argv[i]);
-          if (pid) {
-            if (npids == MAX_CHANNELS) {
-              fprintf(stderr,"\nSorry, you can only set up to %d filters.\n\n",MAX_CHANNELS);
-              return(-1);
-            } else {
-              pestypes[npids]=pestype;
-              pestype=DMX_PES_OTHER;
-              pids[npids++]=pid;
-              if (pid2!=-1) {
-                hi_mappids[pid]=pid2>>8;
-                lo_mappids[pid]=pid2&0xff;
-                fprintf(stderr,"Mapping %d to %d\n",pid,pid2);
-              }
+          if (found == 0) {
+            pids_map[map_cnt-1].pids[pids_map[map_cnt-1].pid_cnt] = pid;
+            pids_map[map_cnt-1].pid_cnt++;
+          }
+        }
+
+        // block for the list of pids to demux
+        found = 0;
+        for (j=0;j<npids;j++) {
+          if(pids[j] == pid) found = 1;
+        }
+        if (found==0) {
+          if (npids == MAX_CHANNELS) {
+            fprintf(stderr,"\nSorry, you can only set up to %d filters.\n\n",MAX_CHANNELS);
+            return(-1);
+          } else {
+            pestypes[npids]=pestype;
+            pestype=DMX_PES_OTHER;
+            pids[npids++]=pid;
+            if (pid2!=-1) {
+              hi_mappids[pid]=pid2>>8;
+              lo_mappids[pid]=pid2&0xff;
+              fprintf(stderr,"Mapping %d to %d\n",pid,pid2);
             }
           }
         }
       }
     }
+  }
 
   if ((output_type==RTP_PS) && (npids!=2)) {
     fprintf(stderr,"ERROR: PS requires exactly two PIDS - video and audio.\n");
-    exit;
+    exit(1);
+  }
+
+  for (i=0;i<map_cnt;i++) {
+    FILE *f;
+    f = fopen(pids_map[i].filename, "w+b");
+    if (f != NULL) {
+      pids_map[i].fd = fileno(f);
+      make_nonblock(pids_map[i].fd);
+      fprintf(stderr, "Open file %s\n", pids_map[i].filename);
+    } else {
+      pids_map[i].fd = -1;
+      fprintf(stderr, "Couldn't open file %s, errno:%d\n", pids_map[map_cnt-1].filename, errno);
+    }
   }
 
   if (signal(SIGHUP, SignalHandler) == SIG_IGN) signal(SIGHUP, SIG_IGN);
@@ -751,7 +742,8 @@ int main(int argc, char **argv)
   if (i<0) { exit(i); }
 
   for (i=0;i<map_cnt;i++) {
-    fprintf(stderr,"MAP %d, file %s: From %ld secs, To %ld secs, %d PIDs - ",i,pids_map[i].filename,pids_map[i].start_time,pids_map[i].end_time,pids_map[i].num);
+    if ((secs==-1) || (secs < pids_map[i].end_time)) { secs=pids_map[i].end_time; }
+    fprintf(stderr,"MAP %d, file %s: From %ld secs, To %ld secs, %d PIDs - ",i,pids_map[i].filename,pids_map[i].start_time,pids_map[i].end_time,pids_map[i].pid_cnt);
     for (j=0;j<MAX_CHANNELS;j++) { if (pids_map[i].pids[j]!=-1) fprintf(stderr," %d",pids_map[i].pids[j]); }
     fprintf(stderr,"\n");
   }
@@ -836,8 +828,6 @@ int main(int argc, char **argv)
   pfds[0].events=POLLIN|POLLPRI;
   pfds[1].events=POLLIN|POLLPRI;
 
-  /* Set up timer */
-  //  if (secs > 0) alarm(secs);
   while ( !Interrupted) {
     /* Poll the open file descriptors */
     if (ns==-1) {
@@ -886,8 +876,8 @@ int main(int argc, char **argv)
            pid = ((buf[1] & 0x1f) << 8) | buf[2];
            if (pids_map != NULL)        {
              for (i = 0; i < map_cnt; i++) {
-               if ( ((pids_map[i].start_time==-1) || (pids_map[i].start_time >= now))
-		    && ((pids_map[i].end_time==-1) || (pids_map[i].end_time <= now))) {
+               if ( ((pids_map[i].start_time==-1) || (pids_map[i].start_time <= now))
+		    && ((pids_map[i].end_time==-1) || (pids_map[i].end_time >= now))) {
                  for (j = 0; j < MAX_CHANNELS; j++) {
                    if (pids_map[i].pids[j] == pid) {
                      errno = 0;
@@ -909,6 +899,7 @@ int main(int argc, char **argv)
         }
       }
     }
+    if ((secs!=-1) && (secs <=now)) { Interrupted=1; }
   }
 
   if (Interrupted) {
