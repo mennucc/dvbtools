@@ -451,6 +451,7 @@ int main(int argc, char **argv)
     fprintf(stderr,"-i          IP multicast address\n");
     fprintf(stderr,"-r          IP multicast port\n");
     fprintf(stderr,"-o          Stream to stdout instead of network\n");
+    fprintf(stderr,"-n secs     Stop after secs seconds\n");
     fprintf(stderr,"-ps         Convert stream to Program Stream format (needs exactly 2 pids)\n");
     fprintf(stderr,"-v vpid     Decode video PID (full cards only)\n");
     fprintf(stderr,"-a apid     Decode audio PID (full cards only)\n");
@@ -501,7 +502,7 @@ int main(int argc, char **argv)
         srate=atoi(argv[i])*1000UL;
       } else if (strcmp(argv[i],"-o")==0) {
         to_stdout = 1;
-      } else if (strcmp(argv[i],"-t")==0) {
+      } else if (strcmp(argv[i],"-n")==0) {
         i++;
         secs=atoi(argv[i]);
       } else if (strcmp(argv[i],"-c")==0) {
