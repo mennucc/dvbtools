@@ -40,7 +40,7 @@ int y=0;
 int x=0;
 
 int minx=0;
-int miny=0;
+int miny=999;
 int width=720;
 int height=226;
 
@@ -84,7 +84,7 @@ int in_scanline=0;
 
 unsigned char img[720*576];
 
-int fd_osd;
+int fd_osd=-1;
 
 int OSDcmd(int fd, OSD_Command cmd, int x0, int y0, int x1, int y1, int color, void* data) {
   osd_cmd_t osd;
@@ -101,6 +101,8 @@ int OSDcmd(int fd, OSD_Command cmd, int x0, int y0, int x1, int y1, int color, v
     if ((res=ioctl(fd,OSD_SEND_CMD,&osd))!=0) {
       perror("OSDCmd");
     }
+  } else {
+    fprintf(stderr,"in OSD_cmd, fd_osd=%d\n",fd_osd);
   }
 }
 
@@ -119,6 +121,7 @@ int init_OSD() {
     OSDcmd(fd_osd, OSD_Open,minx,miny,minx+width,miny+height,4,NULL);
     OSDcmd(fd_osd, OSD_Hide,0,0,0,0,0,NULL);
     OSDcmd(fd_osd, OSD_Clear,0,0,0,0,0,NULL);
+    OSDcmd(fd_osd, OSD_Show,0,0,0,0,0,NULL);
 //    OSDcmd(fd_osd, OSD_SetPalette,0,0,0,0,0,green); /* Bg colour */
 //    OSDcmd(fd_osd, OSD_SetPalette,1,0,0,0,1,blue);
 //    OSDcmd(fd_osd, OSD_SetPalette,2,0,0,0,2,black);
@@ -381,6 +384,8 @@ void process_page_composition_segment() {
     region_x=(buf[i]<<8)|buf[i+1]; i+=2;
     region_y=(buf[i]<<8)|buf[i+1]; i+=2;
 
+    if (region_y < miny) { miny=region_y; }
+
     region_xs[region_id]=region_x;
     region_ys[region_id]=region_y;
 
@@ -597,7 +602,7 @@ void process_object_data_segment() {
     //    OSDcmd(fd_osd, OSD_Hide,0,0,0,0,0,NULL);
     OSDcmd(fd_osd, OSD_SetBlock,0,0,719,height,-1,img);
     OSDcmd(fd_osd, OSD_Show,0,0,0,0,0,NULL);
-    //    usleep(20000);
+    usleep(20000);
   }
   printf("</object_data_segment>\n");
 }
@@ -632,9 +637,9 @@ int main(int argc, char* argv[]) {
     if (!(isdigit(argv[1][n]))) is_num=0;
   }
 
-  open_OSD();
-  init_OSD();
-  test_OSD();
+  //  open_OSD();
+  //  init_OSD();
+  //  test_OSD();
 
   if (is_num) {
     pid=atoi(argv[1]);
@@ -705,9 +710,14 @@ int main(int argc, char* argv[]) {
 
       /* SEGMENT_DATA_FIELD */
       switch(segment_type) {
-        case 0x10: process_page_composition_segment();
+        case 0x10: process_page_composition_segment(); 
                    break;
         case 0x11: process_region_composition_segment();
+                   if ((fd_osd < 0) && (miny != 999)) {
+                     fprintf(stderr,"opening osd device, miny=%d\n",miny);
+                     open_OSD();
+                     init_OSD();
+                   }
                    break;
         case 0x12: process_CLUT_definition_segment();
                    break;
@@ -723,3 +733,37 @@ int main(int argc, char* argv[]) {
     printf("</pes_packet>\n");
   }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
