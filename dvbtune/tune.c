@@ -150,15 +150,18 @@ int SecGetStatus (int fd, struct secStatus *state)
 
 void print_status(FILE* fd,FrontendStatus festatus) {
   fprintf(fd,"FE_STATUS:");
-  //  if (festatus & FE_HAS_POWER) fprintf(fd," FE_HAS_POWER");
   if (festatus & FE_HAS_SIGNAL) fprintf(fd," FE_HAS_SIGNAL");
-  //  if (festatus & FE_SPECTRUM_INV) fprintf(fd," FE_SPECTRUM_INV");
+#ifdef NEWSTRUCT
+  if (festatus & FE_TIMEDOUT) fprintf(fd," FE_TIMEDOUT");
+#else
+  if (festatus & FE_HAS_POWER) fprintf(fd," FE_HAS_POWER");
+  if (festatus & FE_SPECTRUM_INV) fprintf(fd," FE_SPECTRUM_INV");
+  if (festatus & FE_TUNER_HAS_LOCK) fprintf(fd," FE_TUNER_HAS_LOCK");
+#endif
   if (festatus & FE_HAS_LOCK) fprintf(fd," FE_HAS_LOCK");
   if (festatus & FE_HAS_CARRIER) fprintf(fd," FE_HAS_CARRIER");
   if (festatus & FE_HAS_VITERBI) fprintf(fd," FE_HAS_VITERBI");
   if (festatus & FE_HAS_SYNC) fprintf(fd," FE_HAS_SYNC");
-  if (festatus & FE_TIMEDOUT) fprintf(fd," FE_TIMEDOUT");
-  //  if (festatus & FE_TUNER_HAS_LOCK) fprintf(fd," FE_TUNER_HAS_LOCK");
   fprintf(fd,"\n");
 }
 
