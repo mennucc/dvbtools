@@ -77,7 +77,7 @@ int pnr=-1;
 int apid=0;
 int vpid=0;
 int card=0;
-SpectralInversion specInv = INVERSION_AUTO;
+fe_spectral_inversion_t specInv = INVERSION_AUTO;
 int tone = -1;
 
 #ifdef NEWSTRUCT
@@ -263,7 +263,7 @@ void add_pat(pat_t pat) {
 
 void set_recpid(int fd, ushort ttpid) 
 {  
-struct dmxPesFilterParams pesFilterParamsREC;
+struct dmx_pes_filter_params pesFilterParamsREC;
 
         if (ttpid==0 || ttpid==0xffff) {
 	        ioctl(fd, DMX_STOP, 0);
@@ -273,7 +273,11 @@ struct dmxPesFilterParams pesFilterParamsREC;
 	pesFilterParamsREC.pid     = ttpid;
 	pesFilterParamsREC.input   = DMX_IN_FRONTEND; 
 	pesFilterParamsREC.output  = DMX_OUT_TAP; 
+#ifdef NEWSTRUCT
+	pesFilterParamsREC.pes_type = DMX_PES_OTHER; 
+#else
 	pesFilterParamsREC.pesType = DMX_PES_OTHER; 
+#endif
 	pesFilterParamsREC.flags   = DMX_IMMEDIATE_START;
 	if (ioctl(fd, DMX_SET_PES_FILTER, 
 		  &pesFilterParamsREC) < 0)
@@ -282,7 +286,7 @@ struct dmxPesFilterParams pesFilterParamsREC;
 
 void set_sipid(ushort ttpid) 
 {  
-struct dmxPesFilterParams pesFilterParamsSI;
+struct dmx_pes_filter_params pesFilterParamsSI;
 
         if (ttpid==0 || ttpid==0xffff) {
 	        ioctl(fd_demuxsi, DMX_STOP, 0);
@@ -292,7 +296,11 @@ struct dmxPesFilterParams pesFilterParamsSI;
 	pesFilterParamsSI.pid     = ttpid;
 	pesFilterParamsSI.input   = DMX_IN_FRONTEND; 
 	pesFilterParamsSI.output  = DMX_OUT_TS_TAP; 
+#ifdef NEWSTRUCT
+	pesFilterParamsSI.pes_type = DMX_PES_OTHER; 
+#else
 	pesFilterParamsSI.pesType = DMX_PES_OTHER; 
+#endif
 	pesFilterParamsSI.flags   = DMX_IMMEDIATE_START;
 	if (ioctl(fd_demuxsi, DMX_SET_PES_FILTER, 
 		  &pesFilterParamsSI) < 0)
@@ -301,7 +309,7 @@ struct dmxPesFilterParams pesFilterParamsSI;
 
 void set_ttpid(ushort ttpid) 
 {  
-struct dmxPesFilterParams pesFilterParamsTT;
+struct dmx_pes_filter_params pesFilterParamsTT;
 
         if (ttpid==0 || ttpid==0xffff) {
 	        ioctl(fd_demuxtt, DMX_STOP, 0);
@@ -311,7 +319,11 @@ struct dmxPesFilterParams pesFilterParamsTT;
 	pesFilterParamsTT.pid     = ttpid;
 	pesFilterParamsTT.input   = DMX_IN_FRONTEND; 
 	pesFilterParamsTT.output  = DMX_OUT_DECODER; 
+#ifdef NEWSTRUCT
+	pesFilterParamsTT.pes_type = DMX_PES_TELETEXT; 
+#else
 	pesFilterParamsTT.pesType = DMX_PES_TELETEXT; 
+#endif
 	pesFilterParamsTT.flags   = DMX_IMMEDIATE_START;
 	if (ioctl(fd_demuxtt, DMX_SET_PES_FILTER, 
 		  &pesFilterParamsTT) < 0)
@@ -320,7 +332,7 @@ struct dmxPesFilterParams pesFilterParamsTT;
 
 void set_vpid(ushort vpid) 
 {  
-struct dmxPesFilterParams pesFilterParamsV;
+struct dmx_pes_filter_params pesFilterParamsV;
         if (vpid==0 || vpid==0xffff) {
 	        ioctl(fd_demuxv, DMX_STOP, 0);
 	        return;
@@ -329,7 +341,11 @@ struct dmxPesFilterParams pesFilterParamsV;
 	pesFilterParamsV.pid     = vpid;
 	pesFilterParamsV.input   = DMX_IN_FRONTEND; 
 	pesFilterParamsV.output  = DMX_OUT_DECODER; 
+#ifdef NEWSTRUCT
+	pesFilterParamsV.pes_type = DMX_PES_VIDEO; 
+#else
 	pesFilterParamsV.pesType = DMX_PES_VIDEO; 
+#endif
 	pesFilterParamsV.flags   = DMX_IMMEDIATE_START;
 	if (ioctl(fd_demuxv, DMX_SET_PES_FILTER, 
 		  &pesFilterParamsV) < 0)
@@ -338,7 +354,7 @@ struct dmxPesFilterParams pesFilterParamsV;
 
 void set_apid(ushort apid) 
 {  
-struct dmxPesFilterParams pesFilterParamsA;
+struct dmx_pes_filter_params pesFilterParamsA;
         if (apid==0 || apid==0xffff) {
 	        ioctl(fd_demuxa, DMX_STOP, apid);
 	        return;
@@ -346,7 +362,11 @@ struct dmxPesFilterParams pesFilterParamsA;
 	pesFilterParamsA.pid = apid;
 	pesFilterParamsA.input = DMX_IN_FRONTEND; 
 	pesFilterParamsA.output = DMX_OUT_DECODER; 
+#ifdef NEWSTRUCT
+	pesFilterParamsA.pes_type = DMX_PES_AUDIO; 
+#else
 	pesFilterParamsA.pesType = DMX_PES_AUDIO; 
+#endif
 	pesFilterParamsA.flags = DMX_IMMEDIATE_START;
 	if (ioctl(fd_demuxa, DMX_SET_PES_FILTER, 
 		  &pesFilterParamsA) < 0)
@@ -355,7 +375,7 @@ struct dmxPesFilterParams pesFilterParamsA;
 
 void set_dpid(ushort dpid) 
 { 
-	struct dmxSctFilterParams sctFilterParams;
+	struct dmx_sct_filter_params sctFilterParams;
  
         if (dpid==0 || dpid==0xffff) {
                 ioctl(fd_demuxd, DMX_STOP, dpid);
@@ -375,12 +395,16 @@ void set_dpid(ushort dpid)
 
 void set_ts_filter(int fd,uint16_t pid)
 {
-  struct dmxPesFilterParams pesFilterParams;
+  struct dmx_pes_filter_params pesFilterParams;
 
   pesFilterParams.pid     = pid; 
   pesFilterParams.input   = DMX_IN_FRONTEND;
   pesFilterParams.output  = DMX_OUT_TS_TAP;
+#ifdef NEWSTRUCT
+  pesFilterParams.pes_type = DMX_PES_OTHER;
+#else
   pesFilterParams.pesType = DMX_PES_OTHER;
+#endif
 // A HACK TO DECODE STREAMS ON DVB-S CARD WHILST STREAMING
 //  if (pid==255) pesFilterParams.pesType = DMX_PES_VIDEO;
 //  if (pid==256) pesFilterParams.pesType = DMX_PES_AUDIO;
@@ -649,7 +673,7 @@ int scan_nit(int x) {
   int i;
   struct pollfd ufd;
   unsigned char buf[4096];
-  struct dmxSctFilterParams sctFilterParams;
+  struct dmx_sct_filter_params sctFilterParams;
   int info_len,network_id;
 
   if((fd_nit = open(demuxdev[card],O_RDWR|O_NONBLOCK)) < 0){
@@ -722,7 +746,7 @@ void scan_pmt(int pid,int sid,int change) {
   int n,seclen;
   int i;
   unsigned char buf[4096];
-  struct dmxSctFilterParams sctFilterParams;
+  struct dmx_sct_filter_params sctFilterParams;
   int service_id;
   int info_len,es_pid,stream_type;
   struct pollfd ufd;
@@ -814,7 +838,7 @@ void scan_pat() {
   int n,seclen;
   int i;
   unsigned char buf[4096];
-  struct dmxSctFilterParams sctFilterParams;
+  struct dmx_sct_filter_params sctFilterParams;
   struct pollfd ufd;
 
   pat_t pat;
@@ -881,7 +905,7 @@ void scan_sdt() {
   int i,k;
   int max_k;
   unsigned char buf[4096];
-  struct dmxSctFilterParams sctFilterParams;
+  struct dmx_sct_filter_params sctFilterParams;
   int ca,service_id,loop_length;
   struct pollfd ufd;
 
@@ -1037,11 +1061,11 @@ int main(int argc, char **argv)
   int ttpid=0;
   int dpid=0;
 
-  Modulation modulation=CONSTELLATION_DEFAULT;
-  TransmitMode TransmissionMode=TRANSMISSION_MODE_DEFAULT;
-  BandWidth bandWidth=BANDWIDTH_DEFAULT;
-  GuardInterval guardInterval=GUARD_INTERVAL_DEFAULT;
-  CodeRate HP_CodeRate=HP_CODERATE_DEFAULT;
+  fe_modulation_t modulation=CONSTELLATION_DEFAULT;
+  fe_transmit_mode_t TransmissionMode=TRANSMISSION_MODE_DEFAULT;
+  fe_bandwidth_t bandWidth=BANDWIDTH_DEFAULT;
+  fe_guard_interval_t guardInterval=GUARD_INTERVAL_DEFAULT;
+  fe_code_rate_t HP_CodeRate=HP_CODERATE_DEFAULT;
   int count;
   transponder_t * t;
 
@@ -1214,7 +1238,7 @@ int main(int argc, char **argv)
 
   if (do_monitor) {
         int32_t strength, ber, snr, uncorr;
-        FrontendStatus festatus;
+        fe_status_t festatus;
 
         if((fd_frontend = open(frontenddev[card],O_RDONLY)) < 0){
                 fprintf(stderr,"frontend: %d",i);

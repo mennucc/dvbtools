@@ -25,6 +25,7 @@
 #include <sys/ioctl.h>
 #include <sys/poll.h>
 #include <unistd.h>
+#include <error.h>
 
 #ifdef NEWSTRUCT
 #include <linux/dvb/dmx.h>
@@ -148,7 +149,7 @@ int SecGetStatus (int fd, struct secStatus *state)
 }
 #endif
 
-void print_status(FILE* fd,FrontendStatus festatus) {
+void print_status(FILE* fd,fe_status_t festatus) {
   fprintf(fd,"FE_STATUS:");
   if (festatus & FE_HAS_SIGNAL) fprintf(fd," FE_HAS_SIGNAL");
 #ifdef NEWSTRUCT
@@ -169,7 +170,7 @@ void print_status(FILE* fd,FrontendStatus festatus) {
 int check_status(int fd_frontend,struct dvb_frontend_parameters* feparams,int tone) {
   int i,res;
   int32_t strength;
-  FrontendStatus festatus;
+  fe_status_t festatus;
   struct dvb_frontend_event event;
   struct dvb_frontend_info fe_info;
   struct pollfd pfd[1];
@@ -188,7 +189,7 @@ int check_status(int fd_frontend,struct dvb_frontend_parameters* feparams,int to
     if (poll(pfd,1,10000)){
       if (pfd[0].revents & POLLIN){
         fprintf(stderr,"Getting frontend event\n");
-        if ( ioctl(fd_frontend, FE_GET_EVENT, &event) == -EBUFFEROVERFLOW){
+        if ( ioctl(fd_frontend, FE_GET_EVENT, &event) < 0){
           perror("FE_GET_EVENT");
           return -1;
         }
@@ -242,7 +243,7 @@ int check_status(int fd_frontend,struct dvb_frontend_parameters* feparams,int to
 int check_status(int fd_frontend,FrontendParameters* feparams,int tone) {
   int i,res;
   int32_t strength;
-  FrontendStatus festatus;
+  fe_status_t festatus;
   FrontendEvent event;
   FrontendInfo fe_info;
   struct pollfd pfd[1];
@@ -260,7 +261,7 @@ int check_status(int fd_frontend,FrontendParameters* feparams,int tone) {
     if (poll(pfd,1,10000)){
       if (pfd[0].revents & POLLIN){
         fprintf(stderr,"Getting frontend event\n");
-        if ( ioctl(fd_frontend, FE_GET_EVENT, &event) == -EBUFFEROVERFLOW){
+        if ( ioctl(fd_frontend, FE_GET_EVENT, &event) < 0) {
           perror("FE_GET_EVENT");
           return -1;
         }
@@ -347,12 +348,12 @@ int check_status(int fd_frontend,FrontendParameters* feparams,int tone) {
 }
 #endif
 
-int tune_it(int fd_frontend, int fd_sec, unsigned int freq, unsigned int srate, char pol, int tone, SpectralInversion specInv, unsigned int diseqc,Modulation modulation,CodeRate HP_CodeRate,TransmitMode TransmissionMode,GuardInterval guardInterval, BandWidth bandWidth) {
+int tune_it(int fd_frontend, int fd_sec, unsigned int freq, unsigned int srate, char pol, int tone, fe_spectral_inversion_t specInv, unsigned int diseqc,fe_modulation_t modulation,fe_code_rate_t HP_CodeRate,fe_transmit_mode_t TransmissionMode,fe_guard_interval_t guardInterval, fe_bandwidth_t bandwidth) {
   int res;
 #ifdef NEWSTRUCT
   struct dvb_frontend_parameters feparams;
   struct dvb_frontend_info fe_info;
-  SecVoltage voltage;
+  fe_sec_voltage_t voltage;
 #else
   FrontendParameters feparams;
   FrontendInfo fe_info;
@@ -392,7 +393,7 @@ int tune_it(int fd_frontend, int fd_sec, unsigned int freq, unsigned int srate, 
       if (freq < 1000000) freq*=1000UL;
       feparams.frequency=freq;
       feparams.inversion=INVERSION_OFF;
-      feparams.u.ofdm.bandwidth=bandWidth;
+      feparams.u.ofdm.bandwidth=bandwidth;
       feparams.u.ofdm.code_rate_HP=HP_CodeRate;
       feparams.u.ofdm.code_rate_LP=LP_CODERATE_DEFAULT;
       feparams.u.ofdm.constellation=modulation;
@@ -403,7 +404,7 @@ int tune_it(int fd_frontend, int fd_sec, unsigned int freq, unsigned int srate, 
       if (freq < 1000000) freq*=1000UL;
       feparams.Frequency=freq;
       feparams.Inversion=INVERSION_OFF;
-      feparams.u.ofdm.bandWidth=bandWidth;
+      feparams.u.ofdm.bandWidth=bandwidth;
       feparams.u.ofdm.HP_CodeRate=HP_CodeRate;
       feparams.u.ofdm.LP_CodeRate=LP_CODERATE_DEFAULT;
       feparams.u.ofdm.Constellation=modulation;

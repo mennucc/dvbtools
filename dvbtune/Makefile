@@ -3,6 +3,12 @@ CFLAGS= -Wall $(INCS)
 CC=gcc
 all: dvbtune
 
+# Delete the following line if you are not using a 
+# "NEWSTRUCT" driver.  If you are using a "NEWSTRUCT"
+# driver, it must be later than October 10th 2002
+
+NEWSTRUCT=1
+
 ifdef NEWSTRUCT
   CFLAGS += -DNEWSTRUCT
   INCS += -I ../DVB/include
