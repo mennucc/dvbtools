@@ -168,6 +168,49 @@ void print_status(FILE* fd,fe_status_t festatus) {
 }
 
 #ifdef NEWSTRUCT
+struct diseqc_cmd {
+   struct dvb_diseqc_master_cmd cmd;
+   uint32_t wait;
+};
+
+void diseqc_send_msg(int fd, fe_sec_voltage_t v, struct diseqc_cmd *cmd,
+		     fe_sec_tone_mode_t t, fe_sec_mini_cmd_t b)
+{
+   ioctl(fd, FE_SET_TONE, SEC_TONE_OFF);
+   ioctl(fd, FE_SET_VOLTAGE, v);
+   usleep(15 * 1000);
+   ioctl(fd, FE_DISEQC_SEND_MASTER_CMD, &cmd->cmd);
+   usleep(cmd->wait * 1000);
+   usleep(15 * 1000);
+   ioctl(fd, FE_DISEQC_SEND_BURST, b);
+   usleep(15 * 1000);
+   ioctl(fd, FE_SET_TONE, t);
+}
+
+
+
+
+/* digital satellite equipment control,
+ * specification is available from http://www.eutelsat.com/ 
+ */
+static int do_diseqc(int secfd, int sat_no, int pol, int hi_lo)
+{
+   struct diseqc_cmd cmd =
+       { {{0xe0, 0x10, 0x38, 0xf0, 0x00, 0x00}, 4}, 0 };
+
+   /* param: high nibble: reset bits, low nibble set bits,
+    * bits are: option, position, polarizaion, band
+    */
+   cmd.cmd.msg[3] =
+       0xf0 | (((sat_no * 4) & 0x0f) | (hi_lo ? 1 : 0) | (pol ? 0 : 2));
+
+   diseqc_send_msg(secfd, pol,
+		   &cmd, hi_lo,
+		   (sat_no / 4) % 2 ? SEC_MINI_B : SEC_MINI_A);
+
+   return 1;
+}
+
 int check_status(int fd_frontend,struct dvb_frontend_parameters* feparams,int tone) {
   int i,res;
   int32_t strength;
@@ -430,7 +473,7 @@ int tune_it(int fd_frontend, int fd_sec, unsigned int freq, unsigned int srate, 
         voltage = SEC_VOLTAGE_13;
       }
 #ifdef NEWSTRUCT
-      if (ioctl(fd_frontend,FE_SET_VOLTAGE,voltage) < 0) {
+if (diseqc==0) if (ioctl(fd_frontend,FE_SET_VOLTAGE,voltage) < 0) {
 #else
       if (ioctl(fd_sec,SEC_SET_VOLTAGE,voltage) < 0) {
 #endif
@@ -474,8 +517,10 @@ int tune_it(int fd_frontend, int fd_sec, unsigned int freq, unsigned int srate, 
 #endif
 
 #ifdef NEWSTRUCT
+      if (diseqc==0) {
       if (ioctl(fd_frontend,FE_SET_TONE,tone) < 0) {
-         perror("ERROR setting tone\n");
+               perror("ERROR setting tone\n");
+      }
       }
 #else
       if (ioctl(fd_sec,SEC_SET_TONE,tone) < 0) {
@@ -485,25 +530,9 @@ int tune_it(int fd_frontend, int fd_sec, unsigned int freq, unsigned int srate, 
 
 #ifdef NEWSTRUCT
 	      if (diseqc > 0) {
-            struct dvb_diseqc_master_cmd cmd = { {0xE0, 0x10, 0x38, 0xF0, 0x00, 0x00}, 4};
-            cmd.msg[3] = 0xF0 | ((((diseqc - 1) * 4) & 0x0F) | (tone == SEC_TONE_ON ? 1 : 0) | (voltage == SEC_VOLTAGE_18 ? 2 : 0));
-
-               if (ioctl(fd_frontend, FE_SET_TONE, SEC_TONE_OFF) < 0) {
-	         perror ("FE_SET_TONE\n");
-	       }
-               if (ioctl(fd_frontend, FE_SET_VOLTAGE, voltage) < 0) {
-	       perror ("FE_SET_VOLTAGE\n");
-	       }
-               usleep(15 * 1000);
-               if (ioctl(fd_frontend, FE_DISEQC_SEND_MASTER_CMD, &cmd) < 0) {
-	       perror ("unable to send diseqc cmd\n");
-	       }
-               usleep(15 * 1000);
-               if (ioctl(fd_frontend, FE_DISEQC_SEND_BURST, (diseqc / 4) % 2 ? SEC_MINI_B : SEC_MINI_A) < 0) {
-		 perror ("unable to send tone\n");
-		 }
-               usleep(15 * 1000);
-	      }
+		do_diseqc(fd_frontend, diseqc-1,voltage,tone);
+		sleep(1);
+              }
 #else
       if (diseqc > 0) {
         struct secCommand scmd;
