@@ -133,104 +133,120 @@ int tune_it(int fd_frontend, int fd_sec, unsigned int freq, unsigned int srate, 
   secVoltage voltage;
   struct pollfd pfd[1];
   struct secStatus sec_state;
+  FrontendInfo fe_info;
 
+  if ( (res = ioctl(fd_frontend,FE_GET_INFO, &fe_info) < 0)){
+     perror("FE_GET_INFO: ");
+     return -1;
+  }
+  
 //  OSTSelftest(fd_frontend);
 //  OSTSetPowerState(fd_frontend, FE_POWER_ON);
 //  OSTGetPowerState(fd_frontend, &festatus);
 
-  if (freq > 100000000) {
-    fprintf(stderr,"tuning DVB-T to %d\n",freq);
-    feparams.Frequency=freq;
-    feparams.u.ofdm.bandWidth=BANDWIDTH_8_MHZ; // WAS: 8
+  switch(fe_info.type) {
+    case FE_OFDM:
+      fprintf(stderr,"tuning DVB-T to %d\n",freq);
+      feparams.Frequency=freq;
+      feparams.Inversion=INVERSION_OFF;
 #ifdef FINLAND
-    feparams.u.ofdm.HP_CodeRate=FEC_1_2;
-    feparams.u.ofdm.LP_CodeRate=FEC_1_2;
-    feparams.u.ofdm.Constellation=QAM_64;  // WAS: 16
-    feparams.u.ofdm.TransmissionMode=TRANSMISSION_MODE_2K;
-    feparams.u.ofdm.guardInterval=GUARD_INTERVAL_1_8;
-    feparams.u.ofdm.HierarchyInformation=HIERARCHY_NONE;
+      /* FINLAND Parameters */
+      feparams.u.ofdm.bandWidth=BANDWIDTH_8_MHZ; // WAS: 8
+      feparams.u.ofdm.HP_CodeRate=FEC_1_2;
+      feparams.u.ofdm.LP_CodeRate=FEC_1_2;
+      feparams.u.ofdm.Constellation=QAM_64;  // WAS: 16
+      feparams.u.ofdm.TransmissionMode=TRANSMISSION_MODE_2K;
+      feparams.u.ofdm.guardInterval=GUARD_INTERVAL_1_8;
+      feparams.u.ofdm.HierarchyInformation=HIERARCHY_NONE;
 #else
-    /* UK Parameters */
-    feparams.u.ofdm.HP_CodeRate=FEC_2_3;
-    feparams.u.ofdm.LP_CodeRate=FEC_1_2;
-    feparams.u.ofdm.Constellation=QAM_64;  // WAS: 16
-    feparams.u.ofdm.TransmissionMode=TRANSMISSION_MODE_2K;
-    feparams.u.ofdm.guardInterval=GUARD_INTERVAL_1_32;
-    feparams.u.ofdm.HierarchyInformation=HIERARCHY_NONE;
+      /* UK Parameters */
+      feparams.u.ofdm.bandWidth=BANDWIDTH_8_MHZ; // WAS: 8
+      feparams.u.ofdm.HP_CodeRate=FEC_2_3;
+      feparams.u.ofdm.LP_CodeRate=FEC_1_2;
+      feparams.u.ofdm.Constellation=QAM_64;  // WAS: 16
+      feparams.u.ofdm.TransmissionMode=TRANSMISSION_MODE_2K;
+      feparams.u.ofdm.guardInterval=GUARD_INTERVAL_1_32;
+      feparams.u.ofdm.HierarchyInformation=HIERARCHY_NONE;
+      break;
 #endif
-  } else {
-    if ((pol=='h') || (pol=='H')) {
-      voltage = SEC_VOLTAGE_18;
-    } else {
-      voltage = SEC_VOLTAGE_13;
-    }
-    if (ioctl(fd_sec,SEC_SET_VOLTAGE,voltage) < 0) {
-       perror("ERROR setting voltage\n");
-    }
-
-    if (freq > 2200000) {
-    // this must be an absolute frequency
-      if (freq < slof) {
-        feparams.Frequency=(freq-lof1);
-        if (tone < 0) tone = SEC_TONE_OFF;
-    } else {
-        feparams.Frequency=(freq-lof2);
-        if (tone < 0) tone = SEC_TONE_ON;
-    }
-  } else {
-    // this is an L-Band frequency
-    feparams.Frequency=freq;
-  }
-#ifdef FINLAND
-    feparams.Inversion=INVERSION_OFF;
-#else
-    feparams.Inversion=specInv;
-#endif
-    feparams.u.qpsk.SymbolRate=srate;
-    feparams.u.qpsk.FEC_inner=FEC_AUTO;
-  
-    if (ioctl(fd_sec,SEC_SET_TONE,tone) < 0) {
-       perror("ERROR setting tone\n");
-    }
-
-    if (diseqc > 0) {
-      struct secCommand scmd;
-      struct secCmdSequence scmds;
-
-      scmds.continuousTone = tone;
-      scmds.voltage = voltage;
-      /*
-      scmds.miniCommand = toneBurst ? SEC_MINI_B : SEC_MINI_A;
-      */
-      scmds.miniCommand = SEC_MINI_NONE;
-
-      scmd.type = 0;
-      scmds.numCommands = 1;
-      scmds.commands = &scmd;
-
-      scmd.u.diseqc.addr = 0x10;
-      scmd.u.diseqc.cmd = 0x38;
-      scmd.u.diseqc.numParams = 1;
-      scmd.u.diseqc.params[0] = 0xf0 | 
-                                (((diseqc - 1) << 2) & 0x0c) |
-                                (voltage==SEC_VOLTAGE_18 ? 0x02 : 0) |
-                                (tone==SEC_TONE_ON ? 0x01 : 0);
-
-      if (ioctl(fd_sec,SEC_SEND_SEQUENCE,&scmds) < 0) {
-        perror("Error sending DisEqC");
-        return -1;
+    case FE_QPSK:
+      fprintf(stderr,"tuning DVB-S to L-Band:%d, Pol:%c Srate=%d, 22kHz=%s\n",feparams.Frequency,pol,srate,tone == SEC_TONE_ON ? "on" : "off");
+      if ((pol=='h') || (pol=='H')) {
+        voltage = SEC_VOLTAGE_18;
+      } else {
+        voltage = SEC_VOLTAGE_13;
       }
-    }
+      if (ioctl(fd_sec,SEC_SET_VOLTAGE,voltage) < 0) {
+         perror("ERROR setting voltage\n");
+      }
 
-    fprintf(stderr,"tuning DVB-S to L-Band:%d, Pol:%c Srate=%d, 22kHz=%s\n",feparams.Frequency,pol,srate,tone == SEC_TONE_ON ? "on" : "off");
-    usleep(100000);
+      if (freq > 2200000) {
+        // this must be an absolute frequency
+        if (freq < slof) {
+          feparams.Frequency=(freq-lof1);
+          if (tone < 0) tone = SEC_TONE_OFF;
+        } else {
+          feparams.Frequency=(freq-lof2);
+          if (tone < 0) tone = SEC_TONE_ON;
+        }
+      } else {
+        // this is an L-Band frequency
+       feparams.Frequency=freq;
+      }
+
+      feparams.Inversion=specInv;
+      feparams.u.qpsk.SymbolRate=srate;
+      feparams.u.qpsk.FEC_inner=FEC_AUTO;
+  
+      if (ioctl(fd_sec,SEC_SET_TONE,tone) < 0) {
+         perror("ERROR setting tone\n");
+      }
+
+      if (diseqc > 0) {
+        struct secCommand scmd;
+        struct secCmdSequence scmds;
+
+        scmds.continuousTone = tone;
+        scmds.voltage = voltage;
+        /*
+        scmds.miniCommand = toneBurst ? SEC_MINI_B : SEC_MINI_A;
+        */
+        scmds.miniCommand = SEC_MINI_NONE;
+
+        scmd.type = 0;
+        scmds.numCommands = 1;
+        scmds.commands = &scmd;
+
+        scmd.u.diseqc.addr = 0x10;
+        scmd.u.diseqc.cmd = 0x38;
+        scmd.u.diseqc.numParams = 1;
+        scmd.u.diseqc.params[0] = 0xf0 | 
+                                  (((diseqc - 1) << 2) & 0x0c) |
+                                  (voltage==SEC_VOLTAGE_18 ? 0x02 : 0) |
+                                  (tone==SEC_TONE_ON ? 0x01 : 0);
+
+        if (ioctl(fd_sec,SEC_SEND_SEQUENCE,&scmds) < 0) {
+          perror("Error sending DisEqC");
+          return -1;
+        }
+      }
+      break;
+    case FE_QAM:
+      feparams.Frequency=freq;
+      feparams.Inversion=INVERSION_OFF;
+      feparams.u.qam.SymbolRate = srate;
+      feparams.u.qam.FEC_inner = FEC_AUTO;
+      feparams.u.qam.QAM = QAM_64;                                                   break;
+    default:
+      fprintf(stderr,"Unknown FE type. Aborting\n");
+      exit(-1);
   }
-
+  usleep(100000);
+   
   if (fd_sec) SecGetStatus(fd_sec, &sec_state);
-
+ 
   i = 0; res = -1;
   while ((i < 3) && (res < 0)) {
-
     if (ioctl(fd_frontend,FE_SET_FRONTEND,&feparams) < 0) {
       perror("ERROR tuning channel\n");
       return -1;
@@ -240,29 +256,29 @@ int tune_it(int fd_frontend, int fd_sec, unsigned int freq, unsigned int srate, 
     pfd[0].events = POLLIN;
 
     if (poll(pfd,1,10000)){
-        if (pfd[0].revents & POLLIN){
-            fprintf(stderr,"Getting frontend event\n");
-            if ( ioctl(fd_frontend, FE_GET_EVENT, &event) == -EBUFFEROVERFLOW){
-                perror("FE_GET_EVENT");
-                return -1;
-            }
-            fprintf(stderr,"Received ");
-            switch(event.type){
-            case FE_UNEXPECTED_EV:
-                fprintf(stderr,"unexpected event\n");
-                res = -1;
-          break;
-            case FE_FAILURE_EV:
-                fprintf(stderr,"failure event\n");
-                res = -1;
-          break;
-            case FE_COMPLETION_EV:
-                fprintf(stderr,"completion event\n");
-                res = 0;
-          break;
-            }
+      if (pfd[0].revents & POLLIN){
+        fprintf(stderr,"Getting frontend event\n");
+        if ( ioctl(fd_frontend, FE_GET_EVENT, &event) == -EBUFFEROVERFLOW){
+          perror("FE_GET_EVENT");
+          return -1;
         }
-  i++;
+        fprintf(stderr,"Received ");
+        switch(event.type){
+          case FE_UNEXPECTED_EV:
+            fprintf(stderr,"unexpected event\n");
+            res = -1;
+            break;
+          case FE_FAILURE_EV:
+            fprintf(stderr,"failure event\n");
+            res = -1;
+            break;
+          case FE_COMPLETION_EV:
+            fprintf(stderr,"completion event\n");
+            res = 0;
+          break;
+        }
+      }
+      i++;
     }
   }
 
@@ -277,13 +293,23 @@ int tune_it(int fd_frontend, int fd_sec, unsigned int freq, unsigned int srate, 
     }
 
     if (event.type == FE_COMPLETION_EV) {
-      if (freq > 100000000) {
-        fprintf(stderr,"Event:  Frequency: %d\n",event.u.completionEvent.Frequency);
-      } else {
-        fprintf(stderr,"Event:  Frequency: %d\n",(unsigned int)((event.u.completionEvent.Frequency)+(tone==SEC_TONE_OFF ? lof1 : lof2)));
-        fprintf(stderr,"        SymbolRate: %d\n",event.u.completionEvent.u.qpsk.SymbolRate);
-        fprintf(stderr,"        FEC_inner:  %d\n",event.u.completionEvent.u.qpsk.FEC_inner);
-        fprintf(stderr,"\n");
+      switch(fe_info.type) {
+         case FE_OFDM:
+           fprintf(stderr,"Event:  Frequency: %d\n",event.u.completionEvent.Frequency);
+           break;
+         case FE_QPSK:
+           fprintf(stderr,"Event:  Frequency: %d\n",(unsigned int)((event.u.completionEvent.Frequency)+(tone==SEC_TONE_OFF ? lof1 : lof2)));
+           fprintf(stderr,"        SymbolRate: %d\n",event.u.completionEvent.u.qpsk.SymbolRate);
+           fprintf(stderr,"        FEC_inner:  %d\n",event.u.completionEvent.u.qpsk.FEC_inner);
+           fprintf(stderr,"\n");
+           break;
+         case FE_QAM:
+           fprintf(stderr,"Event:  Frequency: %d\n",event.u.completionEvent.Frequency);
+           fprintf(stderr,"        SymbolRate: %d\n",event.u.completionEvent.u.qpsk.SymbolRate);
+           fprintf(stderr,"        FEC_inner:  %d\n",event.u.completionEvent.u.qpsk.FEC_inner);
+           break;
+         default:
+           break;
       }
 
       strength=0;
@@ -331,4 +357,3 @@ int tune_it(int fd_frontend, int fd_sec, unsigned int freq, unsigned int srate, 
   }
   return 0;
 }
-
