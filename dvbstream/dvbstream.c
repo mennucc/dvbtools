@@ -42,8 +42,14 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include <netdb.h>
 
 // DVB includes:
+#ifdef NEWSTRUCT
+#include <linux/dvb/dmx.h>
+#include <linux/dvb/frontend.h>
+#else
 #include <ost/dmx.h>
+#include <ost/sec.h>
 #include <ost/frontend.h>
+#endif
 
 #include "rtp.h"
 #include "mpegtools/transform.h"
@@ -70,10 +76,17 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 /* Signal handling code shamelessly copied from VDR by Klaus Schmidinger 
    - see http://www.cadsoft.de/people/kls/vdr/index.htm */
 
+#ifdef NEWSTRUCT
+char* frontenddev[4]={"/dev/dvb/adapter0/frontend0","/dev/dvb/adapter1/frontend0","/dev/dvb/adapter2/frontend0","/dev/dvb/adapter3/frontend0"};
+char* dvrdev[4]={"/dev/dvb/adapter0/dvr0","/dev/dvb/adapter1/dvr0","/dev/dvb/adapter2/dvr0","/dev/dvb/adapter3/dvr0"};
+char* demuxdev[4]={"/dev/dvb/adapter0/demux0","/dev/dvb/adapter1/demux0","/dev/dvb/adapter2/demux0","/dev/dvb/adapter3/demux0"};
+#else
 char* frontenddev[4]={"/dev/ost/frontend0","/dev/ost/frontend1","/dev/ost/frontend2","/dev/ost/frontend3"};
 char* dvrdev[4]={"/dev/ost/dvr0","/dev/ost/dvr1","/dev/ost/dvr2","/dev/ost/dvr3"};
 char* secdev[4]={"/dev/ost/sec0","/dev/ost/sec1","/dev/ost/sec2","/dev/ost/sec3"};
 char* demuxdev[4]={"/dev/ost/demux0","/dev/ost/demux1","/dev/ost/demux2","/dev/ost/demux3"};
+#endif
+
 int card=0;
 
 int Interrupted=0;
@@ -92,13 +105,17 @@ int open_fe(int* fd_frontend,int* fd_sec) {
     if((*fd_frontend = open(frontenddev[card],O_RDWR)) < 0){
         perror("FRONTEND DEVICE: ");
         return -1;
-    } 
+    }
+#ifdef NEWSTRUCT
+    fd_sec=0;
+#else
     if (fd_sec!=0) {
       if((*fd_sec = open(secdev[card],O_RDWR)) < 0){
           perror("SEC DEVICE: ");
           return -1;
       }
     }
+#endif
     return 1;
 }
 
@@ -305,7 +322,7 @@ int process_telnet() {
                   fprintf(stderr,"Tuning to %ld,%ld,%c\n",freq,srate,pol);
                   tune_it(fd_frontend,fd_sec,freq,srate,pol,tone,specInv,diseqc,modulation,HP_CodeRate,TransmissionMode,guardInterval,bandWidth);
                   close(fd_frontend);
-                  close(fd_sec);
+                  if (fd_sec) close(fd_sec);
                 }
               }
             }
@@ -600,7 +617,7 @@ int main(int argc, char **argv)
     if (open_fe(&fd_frontend,&fd_sec)) {
       tune_it(fd_frontend,fd_sec,freq,srate,pol,tone,specInv,diseqc,modulation,HP_CodeRate,TransmissionMode,guardInterval,bandWidth);
       close(fd_frontend);
-      close(fd_sec);
+      if (fd_sec) close(fd_sec);
     }
   }
 
