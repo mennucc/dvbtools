@@ -29,9 +29,9 @@
 #include <errno.h>
 #include <signal.h>
 
-#include <mad.h>
-
 #include <linux/soundcard.h>
+
+#include "libmad/mad.h"
 
 #include "mpegtools/remux.h"
 #include "mpegtools/transform.h"
