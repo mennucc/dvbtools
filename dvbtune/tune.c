@@ -229,7 +229,8 @@ int tune_it(int fd_frontend, unsigned int freq, unsigned int srate, char pol, in
       feparams.u.ofdm.transmission_mode=TransmissionMode;
       feparams.u.ofdm.guard_interval=guardInterval;
       feparams.u.ofdm.hierarchy_information=HIERARCHY_DEFAULT;
-      fprintf(stderr,"tuning DVB-T (%s) to %d Hz, Bandwidth: %d\n",DVB_T_LOCATION,freq, bandwidth);
+      fprintf(stderr,"tuning DVB-T (%s) to %d Hz, Bandwidth: %d\n",DVB_T_LOCATION,freq, 
+	bandwidth==BANDWIDTH_8_MHZ ? 8 : (bandwidth==BANDWIDTH_7_MHZ ? 7 : 6));
       break;
     case FE_QPSK:
     	pol = toupper(pol);
