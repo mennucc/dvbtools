@@ -242,6 +242,7 @@ int tune_it(int fd_frontend, int fd_sec, unsigned int freq, unsigned int srate, 
       }
       break;
     case FE_QAM:
+      fprintf(stderr,"tuning DVB-C to %d, srate=%d\n",freq,srate);
       feparams.Frequency=freq;
       feparams.Inversion=INVERSION_OFF;
       feparams.u.qam.SymbolRate = srate;
