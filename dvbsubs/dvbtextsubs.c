@@ -75,6 +75,7 @@ typedef enum {
 subformat_t subformat;
 
 int debug=0;
+int analyse=0;
 int no_pts_warning=0;
 int keeppts=0;
 uint16_t apid=0;
@@ -417,7 +418,7 @@ void set_line(int line, unsigned char* data,int mag, int the_page) {
 
   //  fprintf(stderr,"the_page=%04x\n",the_page);
   //  fprintf(stdout,"In set_line - mag=%d, line=%d!\n",mag,line);
-  //  if (line==0) { fprintf(stderr,"mag=%d, page=%02x\n",mag,unham(data[0],data[1])); }
+  if ((analyse) && (line==0) && (unham(data[0],data[1])!=0xff)) { fprintf(stderr,"mag=%d, page=%02x\n",mag,unham(data[0],data[1])); }
   if (mag!=((the_page&0x0f00)>>8)) {
      return;
   }
@@ -590,6 +591,8 @@ int main(int argc, char** argv) {
     for (i=1;i<argc;i++) {
       if (strcmp(argv[i],"-d")==0) {
         debug=1;
+      } else if (strcmp(argv[i],"-a")==0) {
+        analyse=1;
       } else if (strcmp(argv[i],"-vdr")==0) {
         pes_format=1;
       } else if (strcmp(argv[i],"-srt")==0) {
