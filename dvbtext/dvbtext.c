@@ -31,6 +31,8 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
+#include <string.h>
 #include <sys/ioctl.h>
 #include <fcntl.h>
 #include <unistd.h>
@@ -218,14 +220,22 @@ int main(int argc, char **argv)
   }
 
   for (i=0;i<count;i++) {  
+#ifdef NEWSTRUCT
+    if((fd[i] = open("/dev/dvb/adapter0/demux0",O_RDWR)) < 0){
+#else
     if((fd[i] = open("/dev/ost/demux",O_RDWR)) < 0){
+#endif
       fprintf(stderr,"FD %i: ",i);
       perror("DEMUX DEVICE: ");
       return -1;
     }
   }
 
+#ifdef NEWSTRUCT
+  if((fd_dvr = open("/dev/dvb/adapter0/dvr0",O_RDONLY)) < 0){
+#else
   if((fd_dvr = open("/dev/ost/dvr",O_RDONLY)) < 0){
+#endif
     perror("DVR DEVICE: ");
     return -1;
   }
