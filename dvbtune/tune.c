@@ -190,7 +190,7 @@ int tune_it(int fd_frontend, int fd_sec, unsigned int freq, unsigned int srate, 
       break;
     case FE_QPSK:
       fprintf(stderr,"tuning DVB-S to L-Band:%d, Pol:%c Srate=%d, 22kHz=%s\n",feparams.Frequency,pol,srate,tone == SEC_TONE_ON ? "on" : "off");
-      if ((pol=='h') || (pol=='H')) {
+      if ((pol=='h') || (pol=='H') || (pol=='l') || (pol=='L')) {
         voltage = SEC_VOLTAGE_18;
       } else {
         voltage = SEC_VOLTAGE_13;

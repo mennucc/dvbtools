@@ -1102,6 +1102,10 @@ int main(int argc, char **argv)
             pol='V';
           } else if (tolower(argv[i][0])=='h') {
             pol='H';
+          } else if (tolower(argv[i][0])=='l') {
+            pol='L';
+          } else if (tolower(argv[i][0])=='r') {
+            pol='R';
           }
         }
       } else if (strcmp(argv[i],"-s")==0) {
