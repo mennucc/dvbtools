@@ -691,7 +691,7 @@ int main(int argc, char **argv)
   if (argc==1) {
     fprintf(stderr,"Usage: dvbtune [OPTIONS]\n\n");
     fprintf(stderr,"Standard options:\n\n");
-    fprintf(stderr,"-f freq     absolute Frequency (DVB-S in Hz or DVB-T in Hz)\n");
+    fprintf(stderr,"-f freq     absolute Frequency (DVB-S in KHz or DVB-T in Hz)\n");
     fprintf(stderr,"            or L-band Frequency (DVB-S in Hz or DVB-T in Hz)\n");
     fprintf(stderr,"-p [H,V]    Polarity (DVB-S only)\n");
     fprintf(stderr,"-s N        Symbol rate (DVB-S or DVB-C)\n");
@@ -705,7 +705,7 @@ int main(int argc, char **argv)
     fprintf(stderr,"-c [0-3]    Use DVB card #[0-3]\n");
     fprintf(stderr,"-tone [0|1] 0=22kHz off, 1=22kHz on\n");
     fprintf(stderr,"-I [0|1|2]  0=Spectrum Inversion off, 1=Spectrum Inversion on, 2=auto\n");
-    fprintf(stderr,"-D [0-4]    DiSEqC command (0=none)\n\n");
+    fprintf(stderr,"-D [1-4]    DiSEqC command\n\n");
     fprintf(stderr,"-qam X      DVB-T modulation - 16%s, 32%s, 64%s, 128%s or 256%s\n",(CONSTELLATION_DEFAULT==QAM_16 ? " (default)" : ""),(CONSTELLATION_DEFAULT==QAM_32 ? " (default)" : ""),(CONSTELLATION_DEFAULT==QAM_64 ? " (default)" : ""),(CONSTELLATION_DEFAULT==QAM_128 ? " (default)" : ""),(CONSTELLATION_DEFAULT==QAM_256 ? " (default)" : ""));
     fprintf(stderr,"-gi N       DVB-T guard interval 1_N (N=32%s, 16%s, 8%s or 4%s)\n",(GUARD_INTERVAL_DEFAULT==GUARD_INTERVAL_1_32 ? " (default)" : ""),(GUARD_INTERVAL_DEFAULT==GUARD_INTERVAL_1_16 ? " (default)" : ""),(GUARD_INTERVAL_DEFAULT==GUARD_INTERVAL_1_8 ? " (default)" : ""),(GUARD_INTERVAL_DEFAULT==GUARD_INTERVAL_1_4 ? " (default)" : ""));
     fprintf(stderr,"-cr N       DVB-T code rate. N=AUTO%s, 1_2%s, 2_3%s, 3_4%s, 5_6%s, 7_8%s\n",(HP_CODERATE_DEFAULT==FEC_AUTO ? " (default)" : ""),(HP_CODERATE_DEFAULT==FEC_1_2 ? " (default)" : ""),(HP_CODERATE_DEFAULT==FEC_2_3 ? " (default)" : ""),(HP_CODERATE_DEFAULT==FEC_3_4 ? " (default)" : ""),(HP_CODERATE_DEFAULT==FEC_5_6 ? " (default)" : ""),(HP_CODERATE_DEFAULT==FEC_7_8 ? " (default)" : ""));
@@ -831,10 +831,11 @@ int main(int argc, char **argv)
       } else if (strcmp(argv[i],"-D")==0) {
         i++;
         diseqc=atoi(argv[i]);
-        if (diseqc > 4) {
-	  fprintf(stderr,"DiSEqC must be between 0 and 4\n");
+        if ((diseqc < 1) || (diseqc > 4)) {
+	  fprintf(stderr,"DiSEqC must be between 1 and 4\n");
           exit(-1);
         }
+	diseqc--;
       } else if (strcmp(argv[i],"-tone")==0) {
 	i++;
 	if (atoi(argv[i])==0)
