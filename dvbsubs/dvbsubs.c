@@ -33,10 +33,98 @@
 
 #include <ost/dmx.h>
 
+// DVB includes:
+#include <ost/osd.h>
+
+int OSDcmd(int fd, OSD_Command cmd, int x0, int y0, int x1, int y1, int color, void* data) {
+  osd_cmd_t osd;
+  int res;
+
+  osd.cmd=cmd;
+  osd.x0=x0;
+  osd.y0=y0;
+  osd.x1=x1;
+  osd.y1=y1;
+  osd.color=color;
+  osd.data=data;
+  if ((res=ioctl(fd,OSD_SEND_CMD,&osd))!=0) {
+    perror("OSDCmd");
+  }
+}
+
+int y=0;
+int x=0;
+
+int minx=0;
+int miny=452;
+int width=720;
+int height=96;
+
+unsigned char white[4]={255,255,255,0xff};
+unsigned char green[4]={0,255,0,0xdf} ;
+unsigned char blue[4]={0,0,255,0xbf} ;
+unsigned char yellow[4]={255,255,0,0xbf} ;
+unsigned char black[4]={0,0,0,0xff} ; 
+unsigned char red[4]={255,0,0,0xbf} ;
+unsigned char magenta[4]={255,0,255,0xff};
+unsigned char othercol[4]={0,255,255,0xff};
+
+
 unsigned char buf[100000];
 int i=0;
 int nibble_flag=0;
 int in_scanline=0;
+
+unsigned char img[720*576];
+
+int fd_osd;
+
+int open_OSD() {
+  if ((fd_osd=open("/dev/ost/osd",O_RDWR)) < 0) {
+    perror("OSD device");
+    return 0;
+  } else {
+    return 1;
+  }
+}
+
+int init_OSD() {
+  if (fd_osd) {
+    OSDcmd(fd_osd, OSD_Open,minx,miny,minx+width,miny+height,4,NULL);
+    OSDcmd(fd_osd, OSD_Hide,0,0,0,0,0,NULL);
+    OSDcmd(fd_osd, OSD_Clear,0,0,0,0,0,NULL);
+    OSDcmd(fd_osd, OSD_SetPalette,0,0,0,0,0,green); /* Bg colour */
+    OSDcmd(fd_osd, OSD_SetPalette,1,0,0,0,1,blue);
+    OSDcmd(fd_osd, OSD_SetPalette,2,0,0,0,2,black);
+    OSDcmd(fd_osd, OSD_SetPalette,3,0,0,0,3,magenta);
+    OSDcmd(fd_osd, OSD_SetPalette,4,0,0,0,4,white);
+    OSDcmd(fd_osd, OSD_SetPalette,5,0,0,0,5,yellow);
+    OSDcmd(fd_osd, OSD_SetPalette,6,0,0,0,6,red);
+    OSDcmd(fd_osd, OSD_SetPalette,7,0,0,0,7,othercol);
+    OSDcmd(fd_osd, OSD_SetPalette,8,0,0,0,8,blue);
+  }
+}
+
+int test_OSD() {
+  //  OSDcmd(fd_osd, OSD_Text,6,2,0,0,1,"TEST STRING");
+}
+
+void do_plot(int x, int y, unsigned char pixel) {
+  int i;
+  i=(y*720)+x;
+  img[i]=pixel;
+}
+
+void plot(int run_length, unsigned char pixel) {
+  int x2=x+run_length;
+  while (x < x2) {
+    do_plot(x,y,pixel);
+    x++;
+  }
+    
+  //  OSDcmd(fd_osd,OSD_Line,x,y,x+run_length-1,y,pixel,NULL);
+  //  x+=run_length;
+}
 
 ssize_t safe_read(int fd, void *buf, size_t count) {
  ssize_t n,tot;
@@ -81,24 +169,26 @@ unsigned char next_nibble () {
    vcdimager contribs directory.  Author unknown, but released under GPL2.
 */
 
-/*
-void palette(int p,int i) {
- double Y,Cr,Cb,R,G,B;
- Y=sub[i+0];
- Cr=sub[i+1];
- Cb=sub[i+2];
+
+void set_palette(int id,int Y_value, int Cr_value, int Cb_value, int T_value) {
+ int Y,Cr,Cb,R,G,B;
+ unsigned char colour[4];
+
+ Y=Y_value;
+ Cr=Cr_value;
+ Cb=Cb_value;
  B = 1.164*(Y - 16)                    + 2.018*(Cb - 128);
  G = 1.164*(Y - 16) - 0.813*(Cr - 128) - 0.391*(Cb - 128);
  R = 1.164*(Y - 16) + 1.596*(Cr - 128);
  if (B<0) B=0; if (B>255) B=255;
  if (G<0) G=0; if (G>255) G=255;
  if (R<0) R=0; if (R>255) R=255;
- pal[p].r=R;
- pal[p].g=G;
- pal[p].b=B; 
- pal[p].t=sub[i+3];
+ colour[0]=R;
+ colour[1]=B;
+ colour[2]=G;
+ colour[3]=T_value;
+ OSDcmd(fd_osd, OSD_SetPalette,id,0,0,0,id,colour);
 }    
-*/
 
 void decode_4bit_pixel_code_string(int n) {
   int next_bits,
@@ -128,6 +218,7 @@ void decode_4bit_pixel_code_string(int n) {
     if (next_bits!=0) {
       pixel_code=next_bits;
       printf("<pixel run_length=\"1\" pixel_code=\"%d\" />\n",pixel_code);
+      plot(1,pixel_code);
       bits+=4;
     } else {
       bits+=4;
@@ -139,6 +230,7 @@ void decode_4bit_pixel_code_string(int n) {
         bits+=3;
         if (run_length!=0) {
           printf("<pixel run_length=\"%d\" pixel_code=\"0\" />\n",run_length+2);
+          plot(run_length+2,pixel_code);
         } else {
 //          printf("end_of_string - run_length=%d\n",run_length);
           break;
@@ -152,19 +244,23 @@ void decode_4bit_pixel_code_string(int n) {
           pixel_code=next_nibble();
           bits+=4;
           printf("<pixel run_length=\"%d\" pixel_code=\"%d\" />\n",run_length+4,pixel_code);
+          plot(run_length+4,pixel_code);
         } else {
           switch_3=(data&0x03);
           bits+=2;
           switch (switch_3) {
             case 0: printf("<pixel run_length=\"1\" pixel_code=\"0\" />\n");
+                    plot(1,pixel_code);
                     break;
             case 1: printf("<pixel run_length=\"2\" pixel_code=\"0\" />\n");
+                    plot(2,pixel_code);
                     break;
             case 2: run_length=next_nibble();
                     bits+=4;
                     pixel_code=next_nibble();
                     bits+=4;
                     printf("<pixel run_length=\"%d\", pixel_code=\"%d\" />\n",run_length+9,pixel_code);
+                    plot(run_length+9,pixel_code);
                     break;
             case 3: run_length=next_nibble();
                     run_length=(run_length<<4)|next_nibble();
@@ -172,6 +268,7 @@ void decode_4bit_pixel_code_string(int n) {
                     pixel_code=next_nibble();
                     bits+=4;
                     printf("<pixel run_length=\"%d\" pixel_code=\"%d\" />\n",run_length+25,pixel_code);
+                    plot(run_length+25,pixel_code);
           }
         }
       }
@@ -203,6 +300,7 @@ void process_pixel_data_sub_block(int n) {
                  break;
       case 0xf0: printf("</scanline>\n");
                  in_scanline=0;
+                 x=0; y+=2;
                  break;
       default: fprintf(stderr,"unimplemented data_type %02x in pixel_data_sub_block\n",data_type);
     }
@@ -397,6 +495,7 @@ void process_CLUT_definition_segment() {
     printf("<Cb_value>%d</Cb_value>\n",Cb_value);
     printf("<T_value>%d</T_value>\n",T_value);
     printf("</CLUT_entry>\n");
+    set_palette(CLUT_entry_id,Y_value,Cr_value,Cb_value,255-T_value);
   }
   printf("</CLUT_entries>\n");
   printf("</CLUT_definition_segment>\n");
@@ -438,10 +537,17 @@ void process_object_data_segment() {
 
     printf("<pixel_data_sub_block type=\"top\" length=\"0x%04x\"/>\n",top_field_data_block_length);
 
+    y=0; x=0;
     process_pixel_data_sub_block(top_field_data_block_length);
 
     printf("<pixel_data_sub_block type=\"bottom\" length=\"0x%04x\"/>\n",bottom_field_data_block_length);
+    y=1; x=0;
     process_pixel_data_sub_block(bottom_field_data_block_length);
+
+    OSDcmd(fd_osd, OSD_SetBlock,0,0,719,95,-1,img);
+    memset(img,0,sizeof(img));
+    OSDcmd(fd_osd, OSD_Show,0,0,0,0,0,NULL);
+    sleep(1);
   }
   printf("</object_data_segment>\n");
 }
@@ -475,7 +581,11 @@ int main(int argc, char* argv[]) {
   for (n=0;n<strlen(argv[1]);n++) {
     if (!(isdigit(argv[1][n]))) is_num=0;
   }
-      
+
+  open_OSD();
+  init_OSD();
+  test_OSD();
+
   if (is_num) {
     pid=atoi(argv[1]);
     if((fd = open("/dev/ost/demux",O_RDWR)) < 0){
