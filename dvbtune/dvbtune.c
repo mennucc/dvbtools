@@ -585,6 +585,7 @@ void parse_descriptors(int info_len,unsigned char *buf) {
              break;
 
           case 0x59:
+             j=0;
              printf("<subtitling_descriptor tag=\"0x59\">\n");
              while (j < descriptor_length) {
                printf("<subtitle_stream lang=\"");
