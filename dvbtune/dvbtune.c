@@ -592,8 +592,8 @@ void parse_descriptors(int info_len,unsigned char *buf) {
                printf("%s",xmlify(buf[i+1]));
                printf("%s",xmlify(buf[i+2]));
                printf("\" type=\"%d\" composition_page_id=\"%04x\" ancillary_page_id=\"%04x\" />\n",buf[i+3],(buf[i+4]<<8)|buf[i+5],(buf[i+6]<<8)|buf[i+7]);
-               i+=7;
-               j+=7;
+               i+=8;
+               j+=8;
              }
              printf("</subtitling_descriptor>\n");
              descriptor_length=0;
