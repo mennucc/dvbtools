@@ -21,10 +21,35 @@
 
 
 #include <stdio.h>
+#include <stdio.h>
+#include <stdint.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <fcntl.h>
+#include <sys/ioctl.h>
+#include <unistd.h>
+#include <time.h>
+#include <sys/poll.h>
+
+#include <ost/dmx.h>
 
 unsigned char buf[100000];
 int i=0;
+
+void set_filt(int fd,uint16_t tt_pid, dmxPesType_t t)
+{
+	size_t bytesRead;
+	struct dmxPesFilterParams pesFilterParams;
+
+	pesFilterParams.pid     = tt_pid;
+	pesFilterParams.input   = DMX_IN_FRONTEND;
+	pesFilterParams.output  = DMX_OUT_TAP;
+        pesFilterParams.pesType = t;
+	pesFilterParams.flags   = DMX_IMMEDIATE_START;
+
+	if (ioctl(fd, DMX_SET_PES_FILTER, &pesFilterParams) < 0)  
+		perror("DMX SET PES FILTER:");
+}
 
 void process_page_composition_segment() {
   int segment_type,
@@ -39,12 +64,13 @@ void process_page_composition_segment() {
   page_id=(buf[i]<<8)|buf[i+1]; i+=2;
   segment_length=(buf[i]<<8)|buf[i+1]; i+=2;
 
+  j=i+segment_length;
+
   page_time_out=buf[i++];
   page_version_number=(buf[i]&0xf0)>>4;
   page_state=(buf[i]&0x0c)>>2;
   i++;
 
-  j=i+segment_length-2;
   printf("<page_composition_segment page_id=\"0x%02x\">\n",page_id);
   printf("<page_time_out>%d</page_time_out>\n",page_time_out);
   printf("<page_version_number>%d</page_version_number>\n",page_version_number);
@@ -96,6 +122,9 @@ void process_region_composition_segment() {
 
   page_id=(buf[i]<<8)|buf[i+1]; i+=2;
   segment_length=(buf[i]<<8)|buf[i+1]; i+=2;
+
+  j=i+segment_length;
+
   region_id=buf[i++];
   region_version_number=(buf[i]&0xf0)>>4;
   region_fill_flag=(buf[i]&0x08)>>3;
@@ -124,7 +153,6 @@ void process_region_composition_segment() {
   printf("<region_4_bit_pixel_code>%d</region_4_bit_pixel_code>\n",region_4_bit_pixel_code);
   printf("<region_2_bit_pixel_code>%d</region_2_bit_pixel_code>\n",region_2_bit_pixel_code);
   
-  j=i+segment_length-10;
   printf("<objects>\n");
   while (i < j) {
     object_id=(buf[i]<<8)|buf[i+1]; i+=2;
@@ -150,6 +178,71 @@ void process_region_composition_segment() {
   printf("</region_composition_segment>\n");
 }
 
+void process_CLUT_definition_segment() {
+  int page_id,
+      segment_length,
+      CLUT_id,
+      CLUT_version_number;
+
+  int CLUT_entry_id,
+      CLUT_flag_8_bit,
+      CLUT_flag_4_bit,
+      CLUT_flag_2_bit,
+      full_range_flag,
+      Y_value,
+      Cr_value,
+      Cb_value,
+      T_value;
+
+  int j;
+
+  page_id=(buf[i]<<8)|buf[i+1]; i+=2;
+  segment_length=(buf[i]<<8)|buf[i+1]; i+=2;
+  j=i+segment_length;
+
+  CLUT_id=buf[i++];
+  CLUT_version_number=(buf[i]&0xf0)>>4;
+  i++;
+
+  printf("<CLUT_definition_segment page_id=\"0x%02x\" CLUT_id=\"0x%02x\">\n",page_id,CLUT_id);
+
+  printf("<CLUT_version_number>%d</CLUT_version_number>\n",CLUT_version_number);
+  printf("<CLUT_entries>\n");
+  while (i < j) {
+    CLUT_entry_id=buf[i++];
+      
+    printf("<CLUT_entry id=\"0x%02x\">\n",CLUT_entry_id);
+    CLUT_flag_2_bit=(buf[i]&0x80)>>7;
+    CLUT_flag_4_bit=(buf[i]&0x40)>>6;
+    CLUT_flag_8_bit=(buf[i]&0x20)>>5;
+    full_range_flag=buf[i]&1;
+    i++;
+    printf("<CLUT_flag_2_bit>%d</CLUT_flag_2_bit>\n",CLUT_flag_2_bit);
+    printf("<CLUT_flag_4_bit>%d</CLUT_flag_4_bit>\n",CLUT_flag_4_bit);
+    printf("<CLUT_flag_8_bit>%d</CLUT_flag_8_bit>\n",CLUT_flag_8_bit);
+    printf("<full_range_flag>%d</full_range_flag>\n",full_range_flag);
+    if (full_range_flag==1) {
+      Y_value=buf[i++];
+      Cr_value=buf[i++];
+      Cb_value=buf[i++];
+      T_value=buf[i++];
+    } else {
+      Y_value=(buf[i]&0xfc)>>2;
+      Cr_value=(buf[i]&0x2<<2)|((buf[i+1]&0xc0)>>6);
+      Cb_value=(buf[i+1]&0x2c)>>2;
+      T_value=buf[i+1]&2;
+      i+=2;
+    }
+    printf("<Y_value>%d</Y_value>\n",Y_value);
+    printf("<Cr_value>%d</Cr_value>\n",Cr_value);
+    printf("<Cb_value>%d</Cb_value>\n",Cb_value);
+    printf("<T_value>%d</T_value>\n",T_value);
+    printf("</CLUT_entry>\n");
+  }
+  printf("</CLUT_entries>\n");
+  printf("</CLUT_definition_segment>\n");
+}
+
 void process_object_data_segment() {
   int segment_type,
       page_id,
@@ -166,14 +259,14 @@ void process_object_data_segment() {
 
   page_id=(buf[i]<<8)|buf[i+1]; i+=2;
   segment_length=(buf[i]<<8)|buf[i+1]; i+=2;
+  j=i+segment_length;
+  
   object_id=(buf[i]<<8)|buf[i+1]; i+=2;
   object_version_number=(buf[i]&0xf0)>>4;
   object_coding_method=(buf[i]&0x0c)>>2;
   non_modifying_colour_flag=(buf[i]&0x02)>>1;
   i++;
 
-  j=i+segment_length-3;
-  
   printf("<object_data_segment page_id=\"0x%02x\" object_id=\"0x%02x\">\n",page_id,object_id);
 
   printf("<object_version_number>%d</object_version_number>\n",object_version_number);
@@ -192,6 +285,7 @@ int main(int argc, char* argv[]) {
   int n;
   int fd;
   int x;
+  int pid;
 
   int stream_id,
       PES_packet_length;
@@ -203,16 +297,27 @@ int main(int argc, char* argv[]) {
       segment_type;
   
   if (argc!=2) {
-    fprintf(stderr,"USAGE: dvbsubs file.pes\n");
+    fprintf(stderr,"USAGE: dvbsubs filename.pes\n");
+    fprintf(stderr,"    or dvbsubs PID\n");
     exit(0);
   }
   
-  fd=open(argv[1],O_RDONLY);
-  if (fd <= 0) {
-    fprintf(stderr,"can't open file\n");
-    exit(0);
+  pid=atoi(argv[1]);
+  if (pid > 0) {
+    if((fd = open("/dev/ost/demux",O_RDWR)) < 0){
+      perror("DEMUX DEVICE 1: ");
+      return -1;
+    }
+    set_filt(fd,pid,DMX_PES_OTHER); 
+  } else {
+    fd=open(argv[1],O_RDONLY);
+    if (fd <= 0) {
+      fprintf(stderr,"can't open file\n");
+      exit(0);
+    }
   }
 
+  printf("<?xml version=\"1.0\" ?>\n");
   while (1) {
     /* READ PES PACKET */
     n=read(fd,buf,6);
@@ -226,7 +331,6 @@ int main(int argc, char* argv[]) {
     PES_packet_length=(buf[i]<<8)|buf[i+1]; i+=2;
     n=read(fd,&buf[6],PES_packet_length);
 
-    printf("PES_packet_length=%d\n",PES_packet_length);
     i++;  // Skip some boring PES flags
     if (buf[i]!=0x80) {
      fprintf(stdout,"UNEXPECTED PES HEADER: %02x\n",buf[i]);
@@ -244,9 +348,8 @@ int main(int argc, char* argv[]) {
     PTS_3=(buf[i]<<7)|((buf[i+1]&0xfe)>>1);         // 15 bits
     i+=2;
 
-    printf("i=%d\n",i);
     printf("<pes_packet data_identifier=\"0x%02x\">\n",buf[i++]);
-    printf("<pts pts1=\"0x%01x\"  pts1=\"0x%04x\"  pts1=\"0x%04x\" />\n",PTS_1,PTS_2,PTS_3);
+    printf("<pts pts1=\"0x%01x\"  pts2=\"0x%04x\"  pts3=\"0x%04x\" />\n",PTS_1,PTS_2,PTS_3);
     printf("<subtitle_stream id=\"0x%02x\">\n",buf[i++]);
     while (buf[i]==0x0f) {
       /* SUBTITLING SEGMENT */
@@ -259,17 +362,18 @@ int main(int argc, char* argv[]) {
                    break;
         case 0x11: process_region_composition_segment();
                    break;
-//      case 0x12: process_CLUT_definition_segment();
-//                 break;
+        case 0x12: process_CLUT_definition_segment();
+                   break;
         case 0x13: process_object_data_segment();
                    break;
         default:
           segment_length=(buf[i+2]<<8)|buf[i+3];
           i+=segment_length+4;
-          printf("SKIPPING segment %02x, length %d\n",segment_type,segment_length);
+//          printf("SKIPPING segment %02x, length %d\n",segment_type,segment_length);
       }
     }   
     printf("</subtitle_stream>\n");
     printf("</pes_packet>\n");
+    exit(0);
   }
 }

@@ -3,6 +3,22 @@ DVBsubs
 
 Program to decode DVB subtitles (ETS 300 743).
 
+This is currently just a test program to dump the DVB subtitle stream
+in XML
+
+Usage:
+
+dvbsubs filename.pes
+
+to decode a PES stream containing DVB subtitles.
+
+or:
+
+dvbsubs PID
+
+to read a PES stream from a DVB card and dump the DVB subtitles.
+
+
 Copyright
 ---------
 
