@@ -437,7 +437,7 @@ void set_line(int line, unsigned char* data,int mag, int the_page) {
            print_page(&thepage);
            fprintf(stdout,"Actual subtitle output:\n");
         }
-        i=bcmp(&thepage.pagebuf[40],&prevpage.pagebuf[40],24*40);
+        i=memcmp(&thepage.pagebuf[40],&prevpage.pagebuf[40],24*40);
         if (debug) { fprintf(stdout,"Comparison of pages: %d\n",i); }
 	if (i!=0) {
           print_page(&thepage);
