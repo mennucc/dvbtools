@@ -506,6 +506,8 @@ int main(int argc, char **argv)
 
     fprintf(stderr,"\nAdvanced tuning options:\n\n");
     fprintf(stderr,"-c [0-3]    Use DVB card #[0-3]\n");
+    fprintf(stderr,"-D [0-4]    DiSEqC command (0=none)\n\n");
+    fprintf(stderr,"-I [0|1|2]  0=Spectrum Inversion off, 1=Spectrum Inversion on, 2=auto\n");
     fprintf(stderr,"-qam X      DVB-T modulation - 16%s, 32%s, 64%s, 128%s or 256%s\n",(CONSTELLATION_DEFAULT==QAM_16 ? " (default)" : ""),(CONSTELLATION_DEFAULT==QAM_32 ? " (default)" : ""),(CONSTELLATION_DEFAULT==QAM_64 ? " (default)" : ""),(CONSTELLATION_DEFAULT==QAM_128 ? " (default)" : ""),(CONSTELLATION_DEFAULT==QAM_256 ? " (default)" : ""));
     fprintf(stderr,"-gi N       DVB-T guard interval 1_N (N=32%s, 16%s, 8%s or 4%s)\n",(GUARD_INTERVAL_DEFAULT==GUARD_INTERVAL_1_32 ? " (default)" : ""),(GUARD_INTERVAL_DEFAULT==GUARD_INTERVAL_1_16 ? " (default)" : ""),(GUARD_INTERVAL_DEFAULT==GUARD_INTERVAL_1_8 ? " (default)" : ""),(GUARD_INTERVAL_DEFAULT==GUARD_INTERVAL_1_4 ? " (default)" : ""));
     fprintf(stderr,"-cr N       DVB-T code rate. N=AUTO%s, 1_2%s, 2_3%s, 3_4%s, 5_6%s, 7_8%s\n",(HP_CODERATE_DEFAULT==FEC_AUTO ? " (default)" : ""),(HP_CODERATE_DEFAULT==FEC_1_2 ? " (default)" : ""),(HP_CODERATE_DEFAULT==FEC_2_3 ? " (default)" : ""),(HP_CODERATE_DEFAULT==FEC_3_4 ? " (default)" : ""),(HP_CODERATE_DEFAULT==FEC_5_6 ? " (default)" : ""),(HP_CODERATE_DEFAULT==FEC_7_8 ? " (default)" : ""));
@@ -555,7 +557,15 @@ int main(int argc, char **argv)
         i++;
         diseqc=atoi(argv[i]);
         if(diseqc < 0 || diseqc > 4) diseqc = 0;
-      } 
+      } else if (strcmp(argv[i],"-I")==0) {
+        i++;
+        if (atoi(argv[i])==0)
+           specInv = INVERSION_OFF;
+        else if (atoi(argv[i])==1)
+           specInv = INVERSION_ON;
+        else
+           specInv = INVERSION_AUTO;
+      }
       else if (strcmp(argv[i],"-o")==0) {
         to_stdout = 1;
       } else if (strcmp(argv[i],"-n")==0) {
