@@ -2,6 +2,7 @@
    multiplexed TS.  Specify the PID on the command-line */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 
 int main(int argc, char **argv)
