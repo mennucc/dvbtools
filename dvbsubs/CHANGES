@@ -1,0 +1,28 @@
+Version 0.3  - Major internal code cleanup
+               Rename of package to "dvbsubs"
+               Added first version of dvbsubs.c to decode DVB subtitles
+               Added "-pts" parameter to dvbtextsubs to specify a PTS offset
+               Removed DVB tuning facilities (just pipe from dvbstream)
+               Added "MicroDVD" subtitle format output for dvbtextsubs
+
+Version 0.2b - Corrected language encodings in vtxdecode.h and added support
+               for the French code page.
+
+Version 0.2
+
+dvbtextsubs - Added "lang" attribute to spu tags (based on the 
+              teletext code page).
+            - Added support for parsing ".vdr" streams containing subtitles 
+              recorded using the ttxtsubs plugin. Thanks to Ragnar Sundblad.
+            - Various improvements to the parsing of the teletext stream
+            - Completed the mapping for the Swedish/Finnish/Hungarian (code 
+              page 3) characters to iso-8859-1.
+            - Use audio PTS for subtitles when the teletext PES packets do not
+              include a PTS (only implemented for -vdr format - not TS format).
+            - Fixed a bug in the PTS decoding.  Thanks to Ragnar Sundblad.
+
+xml2spumux - Correctly parse UTF-8 text provided by libxml2 into
+             iso-8859-1 and map to character encoding used by my teletext 
+             font - i.e. fix handling of characters with accents.
+
+Version 0.1 - Initial release.

@@ -41,8 +41,8 @@ typedef struct {
 typedef struct {
   int width,height;
   int depth;
-  int CLUT_id;
   int win;
+  int CLUT_id;
   int objects_start,objects_end;
   unsigned int object_pos[65536];
   unsigned char img[720*576];

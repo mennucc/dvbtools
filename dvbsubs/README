@@ -1,35 +1,153 @@
-DVBsubs
--------
+dvbsubs - version 0.3 (formally dvbtextsubs)
+--------------------------------------------
 
-Program to decode DVB subtitles (ETS 300 743).  This standard can be
-freely downloaded from http://www.etsi.org/
+INTRODUCTION
+------------
 
-This program is still an alpha version (i.e. incomplete) and attempts
-to decode subtitles using a DVB card's OSD and also dumps the data to
-XML for information.
+dvbsubs is a package for decoding teletext subtitles and DVB
+subtitles from a DVB broadcast and converting them (via an
+intermediate XML file in the case of teletext subtitles) into PNG
+files suitable for use in authoring a DVD using dvdauthor.
 
-Usage:
+There are three programs in this package:
 
-dvbsubs filename.pes
+* dvbtextsubs - decode DVB teletext subtitles (text-based subtitles)
+* dvbsubs - decode DVB subtitles (bitmapped subtitles)
+* xml2spumux - create PNG files from the subtitles produced by dvbtextsubs
 
-to decode a PES stream containing DVB subtitles.
+1. INSTALLATION
+---------------
 
-or:
+dvbtextsubs requires "libpng" (for writing PNG files) and "libxml2"
+(for parsing the XML file).  
 
-dvbsubs PID
+Compile the applications by simply typing "make".
 
-to read a PES stream from a DVB card and decode the subtitles.
+2. USAGE
+--------
 
-For testing, you can use either my "pesdump" program to save a
-subtitle stream to a pes file, or:
+In order to extract subtitles from a recorded transport stream
+(e.g. recorded by dvbstream):
 
-dvbstream [options] -o PID > file.ts
-mpegtools/ts2pes PID < file.ts > file.pes
+dvbtextsubs pid pageno < recording.ts > subtitles.xml
 
-Copyright
----------
+or from a set of ".vdr" files recorded using VDR:
 
-(C) Dave Chapman 2002 <dave@dchapman.com> http://www.linuxstb.org
+cat 0*.vdr | dvbtextsubs pageno > subtitles.xml
+
+The "pid" is probably the same as the teletext PID for the channel.
+However, on some channels, the subtitles are broadcast on a different
+PID to normal teletext.
+
+The "pageno" is the teletext page containing the subtitles.  This is
+commonly page 888, but can be any page.
+
+You can then generate a set of PNG files from this XML file by using
+the "xml2spumux" program:
+
+xml2spumux subtitles.xml > spumux.xml
+
+This program prints a subtitle XML file to stdout for use by spumux
+(part of dvdauthor - see http://dvdauthor.sourceforge.net) and creates
+a set of PNG files, one for each subtitle.
+
+Using spumux, you can then add these subtitles to your already "DVD
+format" audio/video file as follows:
+
+spumux spumux.xml < recording.mpg > subtitled.mpg
+
+For example, a broadcast on BBC1 (vpid=2304, apid=2306, text pid=2305)
+on the Astra 2D satellite at 28 degrees east could be authored as a
+DVD with the following set of commands.
+
+# dvbstream -n 1800 -f 10773 -p h -s 22000 -o 2304 2305 2306 > recording.ts
+
+(this creates a recording 1800 seconds long = 30 minutes)
+
+# mplex -i TS_STREAM -t DVD -o recording.mpg -p 2306 -q 2304 recording.ts
+
+(this is the mplex included as part of dvb-mpegtools.  Other suitable
+multiplexers include the mjpegtools mplex (use mplex -f 8), tcmplex
+and replex.
+
+# dvbtextsubs 2305 888 < recording.ts > subtitles.xml
+# xml2spumux subtitles.xml > spumux.xml
+# spumux spumux.xml < recording.mpg > subtitled.mpg
+# dvdauthor -o DVD -s en -a en recording.mpg
+# dvdauthor -o DVD -T
+
+You should now have a DVD structure in the "DVD" subdirectory.  You
+can play it using "ogle" or "xine":
+
+ogle ./DVD/
+xine /full/path/to/DVD/
+
+or burn it to DVD using growisofs:
+
+growisofs -Z /dev/scd0 -dvd-video DVD
+
+There are many more possibilities for DVD authoring (chapters, menus
+etc) using dvdauthor - see http://dvdauthor.sourceforge.net for more
+details.
+
+Where possible, you should use the latest versions (which may mean CVS
+versions) of all the above tools.
+
+
+3. NOTES 
+--------
+
+1) On a DVD, the palette (i.e. colour) information for subtitles
+is stored in the ".IFO" files, and not the ".VOB" files.  Therefore,
+if you attempt to play "subtitled.mpg" before authoring the DVD, then
+the colours will be incorrect.
+
+spumux cunningly hides the palette information inside "subtitled.mpg".
+This is then read by dvdauthor and the information moved to the IFO
+files during the dvd authoring process.
+
+2) DVD subpictures are limited to 4 colours.  My subtitles use one
+colour for the transparent background and one for the black
+background.  This leaves 2 foreground colours for use by the
+subtitles.  Depending on the broadcaster, this may cause you problems.
+If this happens, spumux will ignore that PNG file.  The current
+solution is to manually edit the subtitles.xml file to reduce the
+number of colours.  Later versions of dvbtextsubs will help with this.
+It is also possible that future versions of spumux can use a
+little-documented feature of DVDs in order to increase the number of
+colours.
+
+3) DVD subpictures are 720x576 pixels for PAL and 720x480 for NTSC.
+xml2spumux only generates PAL sized pictures - as teletext is mainly a
+European system.  Contact me if you would like support for 720x480
+images.
+
+4) If the input to dvbtextsubs contains "gaps in time" (e.g. commercials
+have been removed), then this will result in incorrect timestamps
+assigned to the subtitles after this cut (they will follow the uncut
+timings).
+
+
+4. AUTHOR AND CONTACT DETAILS
+-----------------------------
+
+dvbtextsubs was written by Dave Chapman <dave@dchapman.com>.  The
+latest version is available from http://www.linuxstb.org/dvbtextsubs/.
+It is loosely based on my own dvbtext application and takes the DVB
+tuning code from my dvbtune/dvbstream applications.
+
+The Teletext font was taken from the file vtx20x24.gif included with
+JVtxView 0.0.1 - http://www.unix-ag.uni-kl.de/~mdenn
+
+Thanks to Ragnar Sundblad for his help in adding support for parsing
+teletext subtitles stored in VDR recordings using his ttxtsubs plugin.
+This plugin is available from ftp://ftp.nada.kth.se/pub/home/ragge/vdr/
+
+
+5. COPYRIGHT NOTICE
+-------------------
+
+The dvbtextsubs package is (C) Copyright Dave Chapman 2003-2004.
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -44,4 +162,3 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program; if not, write to the Free Software
 Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-    
