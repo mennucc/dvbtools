@@ -221,7 +221,11 @@ void set_palette(int region_id,int id,int Y_value, int Cr_value, int Cb_value, i
  colour[0]=R;
  colour[1]=B;
  colour[2]=G;
- colour[3]=T_value;
+ if (Y==0) {
+   colour[3]=0;
+ } else {
+   colour[3]=255;
+ }
 
  fprintf(stderr,"setting palette: region=%d,id=%d, R=%d,G=%d,B=%d,T=%d\n",region_id,id,R,G,B,T_value);
 
