@@ -226,7 +226,7 @@ void set_palette(int region_id,int id,int Y_value, int Cr_value, int Cb_value, i
  fprintf(stderr,"setting palette: region=%d,id=%d, R=%d,G=%d,B=%d,T=%d\n",region_id,id,R,G,B,T_value);
 
  OSDcmd(OSD_SetWindow,regions[region_id].win,0,0,0,0,NULL);
- if (id<15) OSDcmd(OSD_SetPalette,id,0,0,0,id,colour);
+ OSDcmd(OSD_SetPalette,id,0,0,0,id,colour);
 }    
 
 void decode_4bit_pixel_code_string(int r, int object_id, int ofs, int n) {
@@ -460,7 +460,7 @@ void process_region_composition_segment() {
 
   if (region_fill_flag==1) {
     fprintf(stderr,"filling region %d with %d\n",region_id,region_4_bit_pixel_code);
-    memset(regions[region_id].img,15,sizeof(regions[region_id].img));
+    memset(regions[region_id].img,region_4_bit_pixel_code,sizeof(regions[region_id].img));
     //    OSDcmd(OSD_SetWindow,regions[region_id].win,0,0,0,0,NULL);
     //    OSDcmd(OSD_SetBlock,0,0,regions[region_id].width-1,regions[region_id].height-1,-1,regions[region_id].img);
   }
@@ -777,7 +777,7 @@ int main(int argc, char* argv[]) {
         } else {
           fprintf(stderr,"hiding region %d\n",r);
           OSDcmd(OSD_SetWindow,regions[r].win,0,0,0,0,NULL);
-          OSDcmd(OSD_MoveWindow,720,0,0,0,0,NULL);
+          OSDcmd(OSD_MoveWindow,0,600,0,0,0,NULL);
         }
       }
     }
