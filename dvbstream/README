@@ -1,4 +1,4 @@
-DVBstream - v0.4
+DVBstream - v0.5
 ----------------
 
 INTRODUCTION
@@ -11,7 +11,9 @@ here.
 
 v0.4pre2 of dvbstream introduced the "-ps" option which performs
 on-the-fly conversion of the stream to a PS before either streaming it
-or writing it to stdout.
+or writing it to stdout.  However, this option is not needed with
+recent versions of MPlayer and xine - they have native Transport
+Stream support.
 
 REQUIREMENTS
 
@@ -102,27 +104,7 @@ mplayer is being rapidly improved.
 You can then view TV being streamed over the network using the
 following command:
 
-dumprtp | ts2ps vpid apid | mplayer -cache 2048 -
-
-This command line is included with dvbstream as the "rtptv.sh" script.
-
-MPLAYER "RTP-PS" SUPPORT
-
-The file "mplayer-libmpdemux-network.c.patch" contains a patch for the
-current (31 Jan 2001) CVS version of mplayer to "enable" the
-experimental RTP support.  To apply it, check out a fresh copy of
-mplayer using and change into the "main/libmpdemux" directory.
-
-Then apply the command:
-
-patch < /path_to/dvbstream-0.4pre2/mplayer-libmpdemux-network.c.patch
-
-You can then build mplayer as normal.  To receive a RTP stream
-broadcast with dvbstream's "-ps" option, you just need to type the
-following command on the client machine:
-
-mplayer rtp://224.0.1.2:5004/ -cache 2048
-
+mplayer -cache 2048 rtp://224.0.1.2:5004/
 
 TELNET INTERFACE
 
@@ -158,7 +140,6 @@ the GNU GPL.
 
 Stephen Davies <steve@daviesfam.org> for the implementation of the
 "-o" and "-t" switches.
-
 
 COPYRIGHT NOTICE
 

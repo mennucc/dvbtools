@@ -64,6 +64,9 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #define USAGE "\nUSAGE: dvbstream tpid1 tpid2 tpid3 .. tpid8\n\n"
 #define PACKET_SIZE 188
 
+// How often (in seconds) to update the "now" variable
+#define ALARM_TIME 5
+
 /* Thanks to Giancarlo Baracchino for this fix */
 #define MTU 1500
 #define IP_HEADER_SIZE 20
@@ -89,7 +92,8 @@ char* demuxdev[4]={"/dev/ost/demux0","/dev/ost/demux1","/dev/ost/demux2","/dev/o
 #endif
 
 int card=0;
-
+long now;
+long real_start_time;
 int Interrupted=0;
 fe_spectral_inversion_t specInv=INVERSION_AUTO;
 int tone=-1;
@@ -121,7 +125,14 @@ int open_fe(int* fd_frontend,int* fd_sec) {
 }
 
 static void SignalHandler(int signum) {
-  if (signum != SIGPIPE) {
+  struct timeval tv;
+
+  if (signum == SIGALRM) {
+    gettimeofday(&tv,(struct timezone*) NULL);
+    now=tv.tv_sec-real_start_time;
+    //    fprintf(stderr,"now=%ld\n",now);
+    alarm(ALARM_TIME);
+  } else if (signum != SIGPIPE) {
     Interrupted=signum;
   }
   signal(signum,SignalHandler);
@@ -419,20 +430,19 @@ typedef struct {
   int fd;
   int pids[MAX_CHANNELS];
   int num;
+  long start_time; // in seconds
+  long end_time;   // in seconds
 } pids_map_t;
 
 pids_map_t *pids_map;
 int map_cnt;
-
-
-
 
 int main(int argc, char **argv)
 {
   //  state_t state=STREAM_OFF;
   unsigned short int port=DEFAULT_PORT;
   int fd_dvr;
-  int i;
+  int i,j;
   unsigned char buf[MTU];
   struct pollfd pfds[2];  // DVR device and Telnet connection
   unsigned int secs = 0;
@@ -447,6 +457,9 @@ int main(int argc, char **argv)
   int output_type=RTP_TS;
   int64_t counts[8192];
   double f;
+  long start_time=-1;
+  long end_time=-1;
+  struct timeval tv;
 
   /* Output: {uni,multi,broad}cast socket */
   char ipOut[20];
@@ -456,7 +469,7 @@ int main(int argc, char **argv)
   pids_map = NULL;
   map_cnt = 0;
 
-  fprintf(stderr,"dvbstream v0.4pre3 - (C) Dave Chapman 2001\n");
+  fprintf(stderr,"dvbstream v0.5 - (C) Dave Chapman 2001-2004\n");
   fprintf(stderr,"Released under the GPL.\n");
   fprintf(stderr,"Latest version available from http://www.linuxstb.org/\n");
 
@@ -523,7 +536,7 @@ int main(int argc, char **argv)
       } else if (strcmp(argv[i],"-p")==0) {
         i++;
         if (argv[i][1]==0) {
-    if (tolower(argv[i][0])=='v') {
+          if (tolower(argv[i][0])=='v') {
             pol='V';
           } else if (tolower(argv[i][0])=='h') {
             pol='H';
@@ -617,12 +630,28 @@ int main(int argc, char **argv)
           fprintf(stderr,"Invalid Code Rate: %s\n",argv[i]);
           exit(0);
         }
+      } else if (strcmp(argv[i],"-from")==0) {
+        i++;
+        if (map_cnt) {
+          pids_map[map_cnt-1].start_time=atoi(argv[i]);
+        } else {
+          start_time=atoi(argv[i]);
+        }
+      } else if (strcmp(argv[i],"-to")==0) {
+        i++;
+        if (map_cnt) {
+          pids_map[map_cnt-1].end_time=atoi(argv[i]);
+        } else {
+          end_time=atoi(argv[i]);
+        }
       } else if (strstr(argv[i], "-o:")==argv[i]) {
         if (strlen(argv[i]) > 3) {
           int pid_cnt = 0, pid, j;
 
           map_cnt++;
           pids_map = (pids_map_t*) realloc(pids_map, sizeof(pids_map_t) * map_cnt);
+          pids_map[map_cnt-1].start_time=start_time;
+          pids_map[map_cnt-1].end_time=end_time;
           for(j=0; j < MAX_CHANNELS; j++) pids_map[map_cnt-1].pids[j] = -1;
           pids_map[map_cnt-1].filename = (char *) malloc(strlen(argv[i]) - 2);
           strcpy(pids_map[map_cnt-1].filename, &argv[i][3]);
@@ -703,11 +732,11 @@ int main(int argc, char **argv)
     exit;
   }
 
-
   if (signal(SIGHUP, SignalHandler) == SIG_IGN) signal(SIGHUP, SIG_IGN);
   if (signal(SIGINT, SignalHandler) == SIG_IGN) signal(SIGINT, SIG_IGN);
   if (signal(SIGTERM, SignalHandler) == SIG_IGN) signal(SIGTERM, SIG_IGN);
   if (signal(SIGALRM, SignalHandler) == SIG_IGN) signal(SIGALRM, SIG_IGN);
+  alarm(ALARM_TIME);
 
   if ( (freq>100000000)) {
     if (open_fe(&fd_frontend,0)) {
@@ -720,6 +749,12 @@ int main(int argc, char **argv)
   }
 
   if (i<0) { exit(i); }
+
+  for (i=0;i<map_cnt;i++) {
+    fprintf(stderr,"MAP %d, file %s: From %ld secs, To %ld secs, %d PIDs - ",i,pids_map[i].filename,pids_map[i].start_time,pids_map[i].end_time,pids_map[i].num);
+    for (j=0;j<MAX_CHANNELS;j++) { if (pids_map[i].pids[j]!=-1) fprintf(stderr," %d",pids_map[i].pids[j]); }
+    fprintf(stderr,"\n");
+  }
 
   for (i=0;i<npids;i++) {  
     if((fd[i] = open(demuxdev[card],O_RDWR)) < 0){
@@ -736,6 +771,10 @@ int main(int argc, char **argv)
 
   /* Now we set the filters */
   for (i=0;i<npids;i++) set_ts_filt(fd[i],pids[i],pestypes[i]);
+
+  gettimeofday(&tv,(struct timezone*) NULL);
+  real_start_time=tv.tv_sec;
+  now=0;
 
   if (do_analyse) {
     fprintf(stderr,"Analysing PIDS\n");
@@ -798,7 +837,7 @@ int main(int argc, char **argv)
   pfds[1].events=POLLIN|POLLPRI;
 
   /* Set up timer */
-  if (secs > 0) alarm(secs);
+  //  if (secs > 0) alarm(secs);
   while ( !Interrupted) {
     /* Poll the open file descriptors */
     if (ns==-1) {
@@ -847,10 +886,13 @@ int main(int argc, char **argv)
            pid = ((buf[1] & 0x1f) << 8) | buf[2];
            if (pids_map != NULL)        {
              for (i = 0; i < map_cnt; i++) {
-               for (j = 0; j < MAX_CHANNELS; j++) {
-                 if (pids_map[i].pids[j] == pid) {
-                   errno = 0;
-                   write(pids_map[i].fd, buf, TS_SIZE);
+               if ( ((pids_map[i].start_time==-1) || (pids_map[i].start_time >= now))
+		    && ((pids_map[i].end_time==-1) || (pids_map[i].end_time <= now))) {
+                 for (j = 0; j < MAX_CHANNELS; j++) {
+                   if (pids_map[i].pids[j] == pid) {
+                     errno = 0;
+                     write(pids_map[i].fd, buf, TS_SIZE);
+                   }
                  }
                }
              }
