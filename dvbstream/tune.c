@@ -212,7 +212,6 @@ static int do_diseqc(int secfd, int sat_no, int pol, int hi_lo)
 }
 
 int check_status(int fd_frontend,struct dvb_frontend_parameters* feparams,int tone) {
-  int i,res;
   int32_t strength;
   fe_status_t festatus;
   struct dvb_frontend_event event;
@@ -234,11 +233,14 @@ int check_status(int fd_frontend,struct dvb_frontend_parameters* feparams,int to
     if (poll(pfd,1,10000)){
       if (pfd[0].revents & POLLIN){
         fprintf(stderr,"Getting frontend event\n");
-        if (status = ioctl(fd_frontend, FE_GET_EVENT, &event) < 0){
-	  if (status != -EOVERFLOW) {
+        if ((status = ioctl(fd_frontend, FE_GET_EVENT, &event)) < 0){
+	  if (errno != EOVERFLOW) {
 	    perror("FE_GET_EVENT");
+	    fprintf(stderr,"status = %d\n", status);
+	    fprintf(stderr,"errno = %d\n", errno);
 	    return -1;
 	  }
+	  else fprintf(stderr,"Overflow error, trying again (status = %d, errno = %d)", status, errno);
         }
       }
       print_status(stderr,event.status);
