@@ -224,7 +224,7 @@ static void xmlsat_EndElement(xmlsatParseState *state, const char *name) {
   } else if (strcmp(name,"service")==0) {
      if (service_name[0]==0) strcpy(service_name,"no name");
 
-     if ((ignore_service==0) && ((type==1) || (type==2))) {  // TV or Radio
+     if ((ignore_service==0) && ((type==1) || (type==2) || (type==155))) {  // TV or Radio or DishNetwork TV
        /* Only print service if at least 1 PID is non-zero */
        if (((ca==0) || (fta==0)) && (((vpid!=0) || (n_apids>0) || (tpid!=0)))) {
 //         printf("%s:%s:%s:%d:%c:%d:%d:%d:",provider_name,((vpid==0) ? "RADIO" : "TV"),service_name,freq,pol,diseqc,srate,vpid);
