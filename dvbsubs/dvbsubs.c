@@ -173,6 +173,7 @@ void decode_4bit_pixel_code_string(int r, int object_id, int ofs, int n) {
 //    printf("buf=%02x %02x %02x %02x\n",buf[i],buf[i+1],buf[i+2],buf[i+3]);
 
     bits=0;
+    pixel_code=0;
     next_bits=next_nibble();
 
     if (next_bits!=0) {
