@@ -327,8 +327,7 @@ void parse_descriptors(int info_len,unsigned char *buf, transponder_t* transpond
           case 0xc5: // canal_satellite_radio_descriptor
 	    /* This is guessed from the data */
             printf("<canal_radio tag=\"0x%02x\" id=\"%d\" name=\"",descriptor_tag,buf[i]);
-            i++;
-            for (j=0;j<descriptor_length;j++) 
+            for (j=1;j<descriptor_length;j++) 
               if (buf[i+j]!=0) printf("%c",buf[i+j]);
             printf("\" />\n");
             i+=descriptor_length;
