@@ -358,6 +358,9 @@ void process_region_composition_segment() {
     regions[region_id].CLUT_id=CLUT_id;
   }
 
+  regions[region_id].width=region_width;
+  regions[region_id].height=region_height;
+
   if (region_fill_flag==1) {
     //    fprintf(stderr,"filling region %d with %d\n",region_id,region_4_bit_pixel_code);
     memset(regions[region_id].img,region_4_bit_pixel_code,sizeof(regions[region_id].img));
