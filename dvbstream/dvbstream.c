@@ -92,13 +92,12 @@ fe_code_rate_t HP_CodeRate=HP_CODERATE_DEFAULT;
 unsigned int diseqc=0;
 char pol=0;
 
-int open_fe(int* fd_frontend,int* fd_sec) {
+int open_fe(int* fd_frontend) {
 
     if((*fd_frontend = open(frontenddev[card],O_RDWR | O_NONBLOCK)) < 0){
         perror("FRONTEND DEVICE: ");
         return -1;
     }
-    fd_sec=0;
     return 1;
 }
 
@@ -163,7 +162,6 @@ typedef enum {STREAM_ON,STREAM_OFF} state_t;
   int pestypes[MAX_CHANNELS];
   unsigned char hi_mappids[8192];
   unsigned char lo_mappids[8192];
-  int fd_sec;
   int fd_frontend;
   int pid,pid2;
   int connectionOpen;
@@ -312,7 +310,7 @@ int process_telnet() {
                 while (cmd[i]==' ') i++;
                 srate=atoi(&cmd[i])*1000UL;
                 fprintf(stderr,"Tuning to %ld,%ld,%c\n",freq,srate,pol);
-                tune_it(fd_frontend,fd_sec,freq,srate,pol,tone,specInv,diseqc,modulation,HP_CodeRate,TransmissionMode,guardInterval,bandWidth);
+                tune_it(fd_frontend,freq,srate,pol,tone,specInv,diseqc,modulation,HP_CodeRate,TransmissionMode,guardInterval,bandWidth);
               }
             }
           }
@@ -714,13 +712,13 @@ int main(int argc, char **argv)
   alarm(ALARM_TIME);
 
   if ( (freq>100000000)) {
-    if (open_fe(&fd_frontend,0)) {
-      i=tune_it(fd_frontend,0,freq,srate,0,tone,specInv,diseqc,modulation,HP_CodeRate,TransmissionMode,guardInterval,bandWidth);
+    if (open_fe(&fd_frontend)) {
+      i=tune_it(fd_frontend,freq,srate,0,tone,specInv,diseqc,modulation,HP_CodeRate,TransmissionMode,guardInterval,bandWidth);
     }
   } else if ((freq!=0) && (pol!=0) && (srate!=0)) {
-    if (open_fe(&fd_frontend,&fd_sec)) {
+    if (open_fe(&fd_frontend)) {
       fprintf(stderr,"Tuning to %ld Hz\n",freq);
-      i=tune_it(fd_frontend,fd_sec,freq,srate,pol,tone,specInv,diseqc,modulation,HP_CodeRate,TransmissionMode,guardInterval,bandWidth);
+      i=tune_it(fd_frontend,freq,srate,pol,tone,specInv,diseqc,modulation,HP_CodeRate,TransmissionMode,guardInterval,bandWidth);
     }
   }
 
@@ -902,7 +900,6 @@ int main(int argc, char **argv)
   for (i=0;i<npids;i++) close(fd[i]);
   close(fd_dvr);
   close(fd_frontend);
-  if (fd_sec) close(fd_sec);
 
   if (do_analyse) {
     for (i=0;i<8192;i++) {

@@ -1029,7 +1029,6 @@ int FEReadUncorrectedBlocks(int fd, uint32_t *ucb)
 int main(int argc, char **argv)
 {
   int fd_frontend=0;
-  int fd_sec=0;
   int fd_dvr=0;
   int do_info=0;
   int do_scan=0;
@@ -1278,7 +1277,7 @@ int main(int argc, char **argv)
     set_vpid(0);
     set_ttpid(0);
 
-    if (tune_it(fd_frontend,fd_sec,freq,srate,pol,tone,specInv,diseqc,modulation,HP_CodeRate,TransmissionMode,guardInterval,bandWidth) < 0) {
+    if (tune_it(fd_frontend,freq,srate,pol,tone,specInv,diseqc,modulation,HP_CodeRate,TransmissionMode,guardInterval,bandWidth) < 0) {
       return -1;
     }
   }
@@ -1290,7 +1289,7 @@ int main(int argc, char **argv)
     while ((t=get_unscanned(transponders))!=NULL) {
       free_pat_list();
       fprintf(stderr,"Scanning %d%c %d\n",t->freq,t->pol,t->srate);
-      tune_it(fd_frontend,fd_sec,t->freq,t->srate,t->pol,tone,specInv,0,modulation,HP_CodeRate,TransmissionMode,guardInterval,bandWidth);
+      tune_it(fd_frontend,t->freq,t->srate,t->pol,tone,specInv,0,modulation,HP_CodeRate,TransmissionMode,guardInterval,bandWidth);
       printf("<transponder id=\"%d\" onid=\"%d\" freq=\"%05d\" srate=\"%d\" pos=\"%04x\" we_flag=\"%d\" polarity=\"%c\" modulation=\"%d\">\n",t->id,t->onid,t->freq,t->srate,t->pos,t->we_flag,t->pol,t->mod);
       t->scanned=1;
       scan_pat();
