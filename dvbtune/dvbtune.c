@@ -117,7 +117,7 @@ transponder_t*  get_unscanned() {
   return NULL;
 }
 
-char xmlify_result[5];
+char xmlify_result[10];
 char* xmlify (char c) {
   switch(c) {
     case '&': strcpy(xmlify_result,"&amp;");
@@ -554,9 +554,14 @@ void parse_descriptors(int info_len,unsigned char *buf) {
              break;
 
           case 0x56:
+             j=0;
              printf("<teletext tag=\"0x56\">\n");
              while (j < descriptor_length) {
-               printf("<teletext_info lang=\"%s%s%s\" type=\"%d\" page=\"%d%02x\" />\n",xmlify(buf[i]),xmlify(buf[i+1]),xmlify(buf[i+2]),(buf[i+3]&0xf8)>>3,(buf[i+3]&0x07),buf[i+4]);
+               printf("<teletext_info lang=\"");
+               printf("%s",xmlify(buf[i]));
+               printf("%s",xmlify(buf[i+1]));
+               printf("%s",xmlify(buf[i+2]));
+               printf("\" type=\"%d\" page=\"%d%02x\" />\n",(buf[i+3]&0xf8)>>3,(buf[i+3]&0x07),buf[i+4]);
                i+=5;
                j+=5;
              }
@@ -567,7 +572,11 @@ void parse_descriptors(int info_len,unsigned char *buf) {
           case 0x59:
              printf("<subtitling_descriptor tag=\"0x59\">\n");
              while (j < descriptor_length) {
-               printf("<subtitle_stream lang=\"%s%s%s\" type=\"%d\" composition_page_id=\"%04x\" ancillary_page_id=\"%04x\" />\n",xmlify(buf[i]),xmlify(buf[i+1]),xmlify(buf[i+2]),buf[i+3],(buf[i+4]<<8)|buf[i+5],(buf[i+6]<<8)|buf[i+7]);
+               printf("<subtitle_stream lang=\"");
+               printf("%s",xmlify(buf[i]));
+               printf("%s",xmlify(buf[i+1]));
+               printf("%s",xmlify(buf[i+2]));
+               printf("\" type=\"%d\" composition_page_id=\"%04x\" ancillary_page_id=\"%04x\" />\n",buf[i+3],(buf[i+4]<<8)|buf[i+5],(buf[i+6]<<8)|buf[i+7]);
                i+=7;
                j+=7;
              }
@@ -587,7 +596,6 @@ void parse_descriptors(int info_len,unsigned char *buf) {
 	    /* This is guessed from the data */
             printf("<canal_radio tag=\"0x%02x\" id=\"%d\" name=\"",descriptor_tag,buf[i]);
             i++;
-            j=0;
             for (j=0;j<descriptor_length;j++) 
               if (buf[i+j]!=0) printf("%c",buf[i+j]);
             printf("\" />\n");
