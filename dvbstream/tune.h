@@ -19,6 +19,7 @@
 #define fe_sec_voltage_t SecVoltage
 #define dmx_pes_filter_params dmxPesFilterParams
 #define dmx_sct_filter_params dmxSctFilterParams
+#define dmx_pes_type_t dmxPesType_t
 #endif
 
 #include "dvb_defaults.h"
