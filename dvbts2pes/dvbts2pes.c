@@ -98,11 +98,13 @@ int main(int argc, char** argv) {
   int counter;
   int adaption_field_control,continuity_counter;
   int adaption_field_length;
+  int discontinuity_indicator;
   int max_pes=0;
   int min_pes=9999999;
   int pes_written=0;
   int pes_dropped=0;
   int ts_dropped=0;
+  int pes_dirty;
 
   if (argc==2) {
     pid=atoi(argv[1]);
@@ -136,19 +138,33 @@ int main(int argc, char** argv) {
     if ( (((buf[1]&0x1f)<<8) | buf[2]) == pid) {
       continuity_counter=buf[3]&0x0f;
       adaption_field_control=(buf[3]&0x30)>>4;
+      discontinuity_indicator=0;
+      if ((adaption_field_control==2) || (adaption_field_control==3)) {
+        if (buf[4] > 0) {  // adaption_field_length
+          discontinuity_indicator=(buf[5]&0x80)>>7;
+        }
+      }
+      if (discontinuity_indicator) {
+        fprintf(stderr,"INFORMATION: packet %d - discontinuity_indicator set\n",packet);
+      }
 
       /* Firstly, check the integrity of the stream */
       if (counter==-1) {
         counter=continuity_counter;
       } else {
-        counter++; counter%=16;
+        if ((adaption_field_control!=0) && (adaption_field_control!=2)) {
+          counter++; counter%=16;
+        }
       }
 
       if (counter!=continuity_counter) {
-        n=(continuity_counter+16-counter)%16;
+        if (discontinuity_indicator==0) {
+          n=(continuity_counter+16-counter)%16;
            
-        fprintf(stderr,"TS: missing %d packet(s), packet=%d, expecting %02x, received %02x\n",n,packet,counter,continuity_counter);
-        ts_dropped+=n;
+          fprintf(stderr,"TS: missing %d packet(s), packet=%d, expecting %02x, received %02x  afc=%d, di=%d\n",n,packet,counter,continuity_counter,adaption_field_control,discontinuity_indicator);
+          ts_dropped+=n;
+          pes_dirty=1;
+        }
         counter=continuity_counter;
       }
 
@@ -157,7 +173,7 @@ int main(int argc, char** argv) {
 //        fprintf(stderr,"%d: payload start\n",packet);
 //        fprintf(stderr,"previous peslength=%d\n",peslength);
         if (ts_status==TS_IN_PAYLOAD) {
-          if (check_pes(pesbuf,peslength)) {
+          if ((pes_dirty==0) && (check_pes(pesbuf,peslength))) {
             c=0;
             while (c<peslength) {
               n=write(1,&pesbuf[c],peslength-c);
@@ -168,8 +184,10 @@ int main(int argc, char** argv) {
             if (peslength < min_pes) { min_pes=peslength; }
             pes_written++;
           } else {
+            fprintf(stderr,"Dropped PES packet\n");
             pes_dropped++;
           }
+          pes_dirty=0;
         } else {
           ts_status=TS_IN_PAYLOAD;
         }
