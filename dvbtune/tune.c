@@ -484,7 +484,26 @@ int tune_it(int fd_frontend, int fd_sec, unsigned int freq, unsigned int srate, 
 #endif
 
 #ifdef NEWSTRUCT
-  #warning DISEQC is unimplemented for NEWSTRUCT
+	      if (diseqc > 0) {
+            struct dvb_diseqc_master_cmd cmd = { {0xE0, 0x10, 0x38, 0xF0, 0x00, 0x00}, 4};
+            cmd.msg[3] = 0xF0 | ((((diseqc - 1) * 4) & 0x0F) | (tone == SEC_TONE_ON ? 1 : 0) | (voltage == SEC_VOLTAGE_18 ? 2 : 0));
+
+               if (ioctl(fd_frontend, FE_SET_TONE, SEC_TONE_OFF) < 0) {
+	         perror ("FE_SET_TONE\n");
+	       }
+               if (ioctl(fd_frontend, FE_SET_VOLTAGE, voltage) < 0) {
+	       perror ("FE_SET_VOLTAGE\n");
+	       }
+               usleep(15 * 1000);
+               if (ioctl(fd_frontend, FE_DISEQC_SEND_MASTER_CMD, &cmd) < 0) {
+	       perror ("unable to send diseqc cmd\n");
+	       }
+               usleep(15 * 1000);
+               if (ioctl(fd_frontend, FE_DISEQC_SEND_BURST, (diseqc / 4) % 2 ? SEC_MINI_B : SEC_MINI_A) < 0) {
+		 perror ("unable to send tone\n");
+		 }
+               usleep(15 * 1000);
+	      }
 #else
       if (diseqc > 0) {
         struct secCommand scmd;
