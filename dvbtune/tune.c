@@ -124,7 +124,7 @@ static int do_diseqc(int fd, unsigned char sat_no, int polv, int hi_lo)
     }
 }
 
-int check_status(int fd_frontend,int type, struct dvb_frontend_parameters* feparams,int hi_lo) {
+int check_status(int fd_frontend,int type, struct dvb_frontend_parameters* feparams,unsigned int base) {
   int32_t strength;
   struct pollfd pfd[1];
   int festatus, locks=0, ok=0;
@@ -162,7 +162,7 @@ int check_status(int fd_frontend,int type, struct dvb_frontend_parameters* fepar
            fprintf(stderr,"Event:  Frequency: %d\n",feparams->frequency);
            break;
          case FE_QPSK:
-           fprintf(stderr,"Event:  Frequency: %d\n",(unsigned int)((feparams->frequency)+(hi_lo ? LOF2 : LOF1)));
+           fprintf(stderr,"Event:  Frequency: %d\n",(unsigned int)(feparams->frequency + base));
            fprintf(stderr,"        SymbolRate: %d\n",feparams->u.qpsk.symbol_rate);
            fprintf(stderr,"        FEC_inner:  %d\n",feparams->u.qpsk.fec_inner);
            fprintf(stderr,"\n");
@@ -208,6 +208,7 @@ int check_status(int fd_frontend,int type, struct dvb_frontend_parameters* fepar
 
 int tune_it(int fd_frontend, unsigned int freq, unsigned int srate, char pol, int tone, fe_spectral_inversion_t specInv, unsigned char diseqc,fe_modulation_t modulation,fe_code_rate_t HP_CodeRate,fe_transmit_mode_t TransmissionMode,fe_guard_interval_t guardInterval, fe_bandwidth_t bandwidth) {
   int res, hi_lo, dfd;
+  unsigned int base;
   struct dvb_frontend_parameters feparams;
   struct dvb_frontend_info fe_info;
 
@@ -216,7 +217,7 @@ int tune_it(int fd_frontend, unsigned int freq, unsigned int srate, char pol, in
      return -1;
   }
   
-  fprintf(stderr,"Using DVB card \"%s\"\n",fe_info.name);
+  fprintf(stderr,"Using DVB card \"%s\", freq=%d\n",fe_info.name, freq);
 
   if (freq < 1000000) freq*=1000UL;
   switch(fe_info.type) {
@@ -235,12 +236,19 @@ int tune_it(int fd_frontend, unsigned int freq, unsigned int srate, char pol, in
       break;
     case FE_QPSK:
     	pol = toupper(pol);
+	if (freq > 2200000) {
         if (freq < SLOF) {
           feparams.frequency=(freq-LOF1);
 	  hi_lo = 0;
+	  base = LOF1;
         } else {
           feparams.frequency=(freq-LOF2);
 	  hi_lo = 1;
+	  base = LOF2;
+      } 
+      } else {
+          feparams.frequency=freq;
+	  base = 0;
       }
 
       fprintf(stderr,"tuning DVB-S to Freq: %u, Pol:%c Srate=%d, 22kHz tone=%s, LNB: %d\n",feparams.frequency,pol,srate,tone == SEC_TONE_ON ? "on" : "off", diseqc);
@@ -277,5 +285,5 @@ int tune_it(int fd_frontend, unsigned int freq, unsigned int srate, char pol, in
   }
   usleep(100000);
 
-  return(check_status(fd_frontend,fe_info.type,&feparams,hi_lo));
+  return(check_status(fd_frontend,fe_info.type,&feparams,base));
 }
