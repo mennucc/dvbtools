@@ -150,45 +150,126 @@ void process_region_composition_segment() {
   printf("</region_composition_segment>\n");
 }
 
+void process_object_data_segment() {
+  int segment_type,
+      page_id,
+      segment_length,
+      object_id,
+      object_version_number,
+      object_coding_method,
+      non_modifying_colour_flag;
+      
+  int top_field_data_block_length,
+      bottom_field_data_block_length;
+      
+  int j;
+
+  page_id=(buf[i]<<8)|buf[i+1]; i+=2;
+  segment_length=(buf[i]<<8)|buf[i+1]; i+=2;
+  object_id=(buf[i]<<8)|buf[i+1]; i+=2;
+  object_version_number=(buf[i]&0xf0)>>4;
+  object_coding_method=(buf[i]&0x0c)>>2;
+  non_modifying_colour_flag=(buf[i]&0x02)>>1;
+  i++;
+
+  j=i+segment_length-3;
+  
+  printf("<object_data_segment page_id=\"0x%02x\" object_id=\"0x%02x\">\n",page_id,object_id);
+
+  printf("<object_version_number>%d</object_version_number>\n",object_version_number);
+  printf("<object_coding_method>%d</object_coding_method>\n",object_coding_method);
+  printf("<non_modifying_colour_flag>%d</non_modifying_colour_flag>\n",non_modifying_colour_flag);
+
+  while (i < j) {
+    i++;
+  }
+
+  printf("</object_data_segment>\n");
+}
+
+
 int main(int argc, char* argv[]) {
   int n;
   int fd;
+  int x;
+
+  int stream_id,
+      PES_packet_length;
+
+  unsigned char PTS_1;
+  unsigned short PTS_2,PTS_3;
 
   int segment_length,
-      segment_type,
-      page_id;
-
-  fd=open("613.pes",O_RDONLY);
-  if (fd > 0) {
-    n=read(fd,buf,100000);
-    fprintf(stderr,"file opened, read %d bytes\n",n);
-  } else {
+      segment_type;
+  
+  if (argc!=2) {
+    fprintf(stderr,"USAGE: dvbsubs file.pes\n");
+    exit(0);
+  }
+  
+  fd=open(argv[1],O_RDONLY);
+  if (fd <= 0) {
     fprintf(stderr,"can't open file\n");
     exit(0);
   }
 
-  i=0xE;
+  while (1) {
+    /* READ PES PACKET */
+    n=read(fd,buf,6);
 
-  /* PES DATA FIELD */
-  printf("<pes_packet data_identifier=\"0x%02x\">\n",buf[i++]);
-  printf("<subtitle_stream id=\"0x%02x\">\n",buf[i++]);
-  while (buf[i]==0x0f) {
-    /* SUBTITLING SEGMENT */
-    printf("sync_byte=0x%02x\n",buf[i++]);
-    segment_type=buf[i++];
-
-    /* SEGMENT_DATA_FIELD */
-    switch(segment_type) {
-      case 0x10: process_page_composition_segment();
-                 break;
-      case 0x11: process_region_composition_segment();
-                 break;
-      default:
-        segment_length=(buf[i+2]<<8)|buf[i+3];
-        i+=segment_length+4;
-        printf("SKIPPING segment %02x, length %d\n",segment_type,segment_length);
+    if ((buf[0]!=0) || (buf[1]!=0) || (buf[2]!=1)) {
+      fprintf(stdout,"CAN NOT FIND PES PACKET\n");
+      exit(-1);
     }
-  }   
-  printf("</subtitle_stream>\n");
-  printf("</pes_packet>\n");
+    i=3;
+    stream_id=buf[i++];
+    PES_packet_length=(buf[i]<<8)|buf[i+1]; i+=2;
+    n=read(fd,&buf[6],PES_packet_length);
+
+    printf("PES_packet_length=%d\n",PES_packet_length);
+    i++;  // Skip some boring PES flags
+    if (buf[i]!=0x80) {
+     fprintf(stdout,"UNEXPECTED PES HEADER: %02x\n",buf[i]);
+     exit(-1);
+    }
+    i++; 
+    if (buf[i]!=5) {
+     fprintf(stdout,"UNEXPECTED PES HEADER DATA LENGTH: %d\n",buf[i]);
+     exit(-1);
+    }
+    i++;  // Header data length
+    PTS_1=(buf[i++]&0x0e)<<28;  // 3 bits
+    PTS_2=(buf[i]<<7)|((buf[i+1]&0xfe)>>1);         // 15 bits
+    i+=2;
+    PTS_3=(buf[i]<<7)|((buf[i+1]&0xfe)>>1);         // 15 bits
+    i+=2;
+
+    printf("i=%d\n",i);
+    printf("<pes_packet data_identifier=\"0x%02x\">\n",buf[i++]);
+    printf("<pts pts1=\"0x%01x\"  pts1=\"0x%04x\"  pts1=\"0x%04x\" />\n",PTS_1,PTS_2,PTS_3);
+    printf("<subtitle_stream id=\"0x%02x\">\n",buf[i++]);
+    while (buf[i]==0x0f) {
+      /* SUBTITLING SEGMENT */
+      i++;  // sync_byte
+      segment_type=buf[i++];
+
+      /* SEGMENT_DATA_FIELD */
+      switch(segment_type) {
+        case 0x10: process_page_composition_segment();
+                   break;
+        case 0x11: process_region_composition_segment();
+                   break;
+//      case 0x12: process_CLUT_definition_segment();
+//                 break;
+        case 0x13: process_object_data_segment();
+                   break;
+        default:
+          segment_length=(buf[i+2]<<8)|buf[i+3];
+          i+=segment_length+4;
+          printf("SKIPPING segment %02x, length %d\n",segment_type,segment_length);
+      }
+    }   
+    printf("</subtitle_stream>\n");
+    printf("</pes_packet>\n");
+  }
 }
