@@ -1,19 +1,10 @@
-# Delete the following line if you are not using a 
-# "NEWSTRUCT" driver.  If you are using a "NEWSTRUCT"
-# driver, it must be later than October 10th 2002
 
-NEWSTRUCT=1
 
 CC=gcc
 CFLAGS =  -g -Wall -O2 -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE
 OBJS=dvbstream dumprtp ts_filter rtpfeed rtp.o 
 
-ifdef NEWSTRUCT
-  CFLAGS += -DNEWSTRUCT
-  INCS=-I ../DVB/include
-else
-  INCS=-I ../DVB/ost/include
-endif
+INCS=-I ../DVB/include
 
 ifdef UK
   CFLAGS += -DUK
