@@ -1,6 +1,8 @@
 /*
    dvbsubs - a program for decoding DVB subtitles (ETS 300 743)
 
+   File: dvbsubs.c
+
    Copyright (C) Dave Chapman 2002
   
    This program is free software; you can redistribute it and/or
@@ -21,7 +23,7 @@
 
 
 #include <stdio.h>
-#include <stdio.h>
+#include <stdlib.h>
 #include <stdint.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -30,25 +32,28 @@
 #include <unistd.h>
 #include <time.h>
 #include <sys/poll.h>
+#include <ctype.h>
+#include <sys/time.h>
 
 #include <ost/dmx.h>
 
 // DVB includes:
 #include <ost/osd.h>
 
+#include "dvbsubs.h"
+
+page_t page;
+region_t regions[MAX_REGIONS];
+
 int y=0;
 int x=0;
 
-int minx=0;
-int miny=999;
-int width=720;
-int height=226;
+int fd_osd;
+int num_windows=1;
+int acquired=0;
+struct timeval start_tv;
 
-unsigned int object_xs[65536];
-unsigned int object_ys[65536];
 unsigned int curr_obj;
-unsigned int region_xs[64];
-unsigned int region_ys[64];
 unsigned int curr_reg[64];
 
 unsigned char white[4]={255,255,255,0xff};
@@ -60,37 +65,29 @@ unsigned char red[4]={255,0,0,0xbf} ;
 unsigned char magenta[4]={255,0,255,0xff};
 unsigned char othercol[4]={0,255,255,0xff};
 
-unsigned char trans[16][4]={ {255,255,255,0},
-                             {255,255,255,0},
-                             {255,255,255,0},
-                             {255,255,255,0},
-                             {255,255,255,0},
-                             {255,255,255,0},
-                             {255,255,255,0},
-                             {255,255,255,0},
-                             {255,255,255,0},
-                             {255,255,255,0},
-                             {255,255,255,0},
-                             {255,255,255,0},
-                             {255,255,255,0},
-                             {255,255,255,0},
-                             {255,255,255,0},
-                             {255,255,255,0} } ;
+unsigned char trans[4]={0,255,0,0};
 
 unsigned char buf[100000];
 int i=0;
 int nibble_flag=0;
 int in_scanline=0;
 
-unsigned char img[720*576];
+void init_data() {
+  int i;
 
-int fd_osd=-1;
+  for (i=0;i<MAX_REGIONS;i++) {
+    page.regions[i].is_visible=0;
+    regions[i].win=-1;
+  }
+}
 
-int OSDcmd(int fd, OSD_Command cmd, int x0, int y0, int x1, int y1, int color, void* data) {
+void OSDcmd(OSD_Command cmd, int x0, int y0, int x1, int y1, int color, void* data) {
   osd_cmd_t osd;
   int res;
 
   if (fd_osd > 0) {
+    if (cmd==OSD_SetBlock) fprintf(stderr,"in OSD_SetBlock\n");
+    if (cmd==OSD_SetWindow) fprintf(stderr,"in OSD_SetWindow - win=%d\n",x0);
     osd.cmd=cmd;
     osd.x0=x0;
     osd.y0=y0;
@@ -98,63 +95,66 @@ int OSDcmd(int fd, OSD_Command cmd, int x0, int y0, int x1, int y1, int color, v
     osd.y1=y1;
     osd.color=color;
     osd.data=data;
-    if ((res=ioctl(fd,OSD_SEND_CMD,&osd))!=0) {
+    if ((res=ioctl(fd_osd,OSD_SEND_CMD,&osd))!=0) {
       perror("OSDCmd");
     }
+    //fprintf(stderr,"end of OSDcmd\n");
   } else {
     fprintf(stderr,"in OSD_cmd, fd_osd=%d\n",fd_osd);
   }
 }
 
-int open_OSD() {
-  if ((fd_osd=open("/dev/ost/osd",O_RDWR)) < 0) {
-    perror("OSD device");
-    return 0;
-  } else {
-    return 1;
-  }
-}
-
-int init_OSD() {
+void create_region(int region_id,int region_width,int region_height,int region_depth) {
   int i;
-  if (fd_osd) {
-    OSDcmd(fd_osd, OSD_Open,minx,miny,minx+width,miny+height,4,NULL);
-    OSDcmd(fd_osd, OSD_Hide,0,0,0,0,0,NULL);
-    OSDcmd(fd_osd, OSD_Clear,0,0,0,0,0,NULL);
-    OSDcmd(fd_osd, OSD_Show,0,0,0,0,0,NULL);
-//    OSDcmd(fd_osd, OSD_SetPalette,0,0,0,0,0,green); /* Bg colour */
-//    OSDcmd(fd_osd, OSD_SetPalette,1,0,0,0,1,blue);
-//    OSDcmd(fd_osd, OSD_SetPalette,2,0,0,0,2,black);
-//    OSDcmd(fd_osd, OSD_SetPalette,3,0,0,0,3,magenta);
-//    OSDcmd(fd_osd, OSD_SetPalette,4,0,0,0,4,white);
-//    OSDcmd(fd_osd, OSD_SetPalette,5,0,0,0,5,yellow);
-//    OSDcmd(fd_osd, OSD_SetPalette,6,0,0,0,6,red);
-//    OSDcmd(fd_osd, OSD_SetPalette,7,0,0,0,7,othercol);
-//    OSDcmd(fd_osd, OSD_SetPalette,8,0,0,0,8,blue);
-    for (i=15;i>=0;i--) {
-      OSDcmd(fd_osd, OSD_SetPalette,i,0,0,0,i,trans);
-    }
+
+  OSDcmd(OSD_Open,0,0,region_width-1,region_height-1,4,(void*)1);
+
+  regions[region_id].win=num_windows++;
+  OSDcmd(OSD_SetWindow,regions[region_id].win,0,0,0,0,NULL);
+  OSDcmd(OSD_MoveWindow,0,600,0,0,0,NULL);
+  fprintf(stderr,"region %d created - win=%d, height=%d, width=%d, depth=%d\n",region_id,regions[region_id].win,region_height,region_width,region_depth);
+  regions[region_id].width=region_width;
+  regions[region_id].height=region_height;
+
+  memset(regions[region_id].img,15,sizeof(regions[region_id].img));
+  OSDcmd(OSD_SetBlock,0,0,regions[region_id].width-1,regions[region_id].height-1,-1,regions[region_id].img);
+
+//    OSDcmd(regions[region_id].fd, OSD_SetPalette,0,0,0,0,0,green); /* Bg colour */
+//    OSDcmd(regions[region_id].fd, OSD_SetPalette,1,0,0,0,1,blue);
+//    OSDcmd(regions[region_id].fd, OSD_SetPalette,2,0,0,0,2,black);
+//    OSDcmd(regions[region_id].fd, OSD_SetPalette,3,0,0,0,3,magenta);
+//    OSDcmd(regions[region_id].fd, OSD_SetPalette,4,0,0,0,4,white);
+//    OSDcmd(regions[region_id].fd, OSD_SetPalette,5,0,0,0,5,yellow);
+//    OSDcmd(regions[region_id].fd, OSD_SetPalette,6,0,0,0,6,red);
+//    OSDcmd(regions[region_id].fd, OSD_SetPalette,7,0,0,0,7,othercol);
+//    OSDcmd(regions[region_id].fd, OSD_SetPalette,8,0,0,0,8,blue);
+  for (i=15;i>=0;i--) {
+    OSDcmd(OSD_SetPalette,i,0,0,0,i,trans);
   }
+
 }
 
-int test_OSD() {
+void test_OSD() {
   //  OSDcmd(fd_osd, OSD_Text,6,2,0,0,1,"TEST STRING");
+  return;
 }
 
-void do_plot(int x, int y, unsigned char pixel) {
+void do_plot(int r,int x, int y, unsigned char pixel) {
   int i;
-  if ((y >= 0) && (y < height)) {
-    i=(y*720)+x;
-    img[i]=pixel;
+  if ((y >= 0) && (y < regions[r].height)) {
+    i=(y*regions[r].width)+x;
+    regions[r].img[i]=pixel;
   } else {
-    fprintf(stderr,"plot out of region: x=%d, y=%d\n",x,y);
+    fprintf(stderr,"plot out of region: x=%d, y=%d - r=%d, height=%d\n",x,y,r,regions[r].height);
   }
 }
 
-void plot(int run_length, unsigned char pixel) {
+void plot(int r,int run_length, unsigned char pixel) {
   int x2=x+run_length;
+
+//  fprintf(stderr,"plot: x=%d,y=%d,length=%d,pixel=%d\n",x,y,run_length,pixel);
   while (x < x2) {
-    do_plot(x,y,pixel);
+    do_plot(r,x,y,pixel);
     x++;
   }
     
@@ -175,7 +175,6 @@ ssize_t safe_read(int fd, void *buf, size_t count) {
 
 void set_filt(int fd,uint16_t tt_pid, dmxPesType_t t)
 {
-	size_t bytesRead;
 	struct dmxPesFilterParams pesFilterParams;
 
 	pesFilterParams.pid     = tt_pid;
@@ -206,7 +205,7 @@ unsigned char next_nibble () {
 */
 
 
-void set_palette(int id,int Y_value, int Cr_value, int Cb_value, int T_value) {
+void set_palette(int region_id,int id,int Y_value, int Cr_value, int Cb_value, int T_value) {
  int Y,Cr,Cb,R,G,B;
  unsigned char colour[4];
 
@@ -223,10 +222,14 @@ void set_palette(int id,int Y_value, int Cr_value, int Cb_value, int T_value) {
  colour[1]=B;
  colour[2]=G;
  colour[3]=T_value;
- if (id < 15) OSDcmd(fd_osd, OSD_SetPalette,id,0,0,0,id,colour);
+
+ fprintf(stderr,"setting palette: region=%d,id=%d, R=%d,G=%d,B=%d,T=%d\n",region_id,id,R,G,B,T_value);
+
+ OSDcmd(OSD_SetWindow,regions[region_id].win,0,0,0,0,NULL);
+ if (id<15) OSDcmd(OSD_SetPalette,id,0,0,0,id,colour);
 }    
 
-void decode_4bit_pixel_code_string(int n) {
+void decode_4bit_pixel_code_string(int r, int object_id, int ofs, int n) {
   int next_bits,
       switch_1,
       switch_2,
@@ -254,7 +257,7 @@ void decode_4bit_pixel_code_string(int n) {
     if (next_bits!=0) {
       pixel_code=next_bits;
       printf("<pixel run_length=\"1\" pixel_code=\"%d\" />\n",pixel_code);
-      plot(1,pixel_code);
+      plot(r,1,pixel_code);
       bits+=4;
     } else {
       bits+=4;
@@ -266,7 +269,7 @@ void decode_4bit_pixel_code_string(int n) {
         bits+=3;
         if (run_length!=0) {
           printf("<pixel run_length=\"%d\" pixel_code=\"0\" />\n",run_length+2);
-          plot(run_length+2,pixel_code);
+          plot(r,run_length+2,pixel_code);
         } else {
 //          printf("end_of_string - run_length=%d\n",run_length);
           break;
@@ -280,23 +283,23 @@ void decode_4bit_pixel_code_string(int n) {
           pixel_code=next_nibble();
           bits+=4;
           printf("<pixel run_length=\"%d\" pixel_code=\"%d\" />\n",run_length+4,pixel_code);
-          plot(run_length+4,pixel_code);
+          plot(r,run_length+4,pixel_code);
         } else {
           switch_3=(data&0x03);
           bits+=2;
           switch (switch_3) {
             case 0: printf("<pixel run_length=\"1\" pixel_code=\"0\" />\n");
-                    plot(1,pixel_code);
+                    plot(r,1,pixel_code);
                     break;
             case 1: printf("<pixel run_length=\"2\" pixel_code=\"0\" />\n");
-                    plot(2,pixel_code);
+                    plot(r,2,pixel_code);
                     break;
             case 2: run_length=next_nibble();
                     bits+=4;
                     pixel_code=next_nibble();
                     bits+=4;
                     printf("<pixel run_length=\"%d\", pixel_code=\"%d\" />\n",run_length+9,pixel_code);
-                    plot(run_length+9,pixel_code);
+                    plot(r,run_length+9,pixel_code);
                     break;
             case 3: run_length=next_nibble();
                     run_length=(run_length<<4)|next_nibble();
@@ -304,7 +307,7 @@ void decode_4bit_pixel_code_string(int n) {
                     pixel_code=next_nibble();
                     bits+=4;
                     printf("<pixel run_length=\"%d\" pixel_code=\"%d\" />\n",run_length+25,pixel_code);
-                    plot(run_length+25,pixel_code);
+                    plot(r,run_length+25,pixel_code);
           }
         }
       }
@@ -319,12 +322,15 @@ void decode_4bit_pixel_code_string(int n) {
 }
 
 
-void process_pixel_data_sub_block(int n) {
+void process_pixel_data_sub_block(int r, int o, int ofs, int n) {
   int data_type;
   int j;
 
   j=i+n;
 
+  x=(regions[r].object_pos[o])>>16;
+  y=((regions[r].object_pos[o])&0xffff)+ofs;
+  fprintf(stderr,"process_pixel_data_sub_block: r=%d, x=%d, y=%d\n",r,x,y);
 //  printf("process_pixel_data: %02x %02x %02x %02x %02x %02x\n",buf[i],buf[i+1],buf[i+2],buf[i+3],buf[i+4],buf[i+5]);
   while (i < j) {
     data_type=buf[i++];
@@ -332,11 +338,11 @@ void process_pixel_data_sub_block(int n) {
 //    printf("<data_type>%02x</data_type>\n",data_type);
 
     switch(data_type) {
-      case 0x11: decode_4bit_pixel_code_string(n-1);
+      case 0x11: decode_4bit_pixel_code_string(r,o,ofs,n-1);
                  break;
       case 0xf0: printf("</scanline>\n");
                  in_scanline=0;
-                 x=object_xs[curr_obj];
+                 x=(regions[r].object_pos[o])>>16;
                  y+=2;
                  break;
       default: fprintf(stderr,"unimplemented data_type %02x in pixel_data_sub_block\n",data_type);
@@ -346,8 +352,7 @@ void process_pixel_data_sub_block(int n) {
   i=j;
 }
 void process_page_composition_segment() {
-  int segment_type,
-      page_id,
+  int page_id,
       segment_length,
       page_time_out,
       page_version_number,
@@ -376,7 +381,14 @@ void process_page_composition_segment() {
      case 3: printf("reserved"); break ;
   }
   printf("</page_state>\n");
-  
+
+  fprintf(stderr,"page_state=%d\n",page_state);
+  if ((acquired==0) && (page_state!=2) && (page_state!=1)) {
+    fprintf(stderr,"waiting for mode_change\n");
+    return;
+  } else {
+    acquired=1;
+  }
   printf("<page_regions>\n");
   while (i<j) {
     region_id=buf[i++];
@@ -384,20 +396,19 @@ void process_page_composition_segment() {
     region_x=(buf[i]<<8)|buf[i+1]; i+=2;
     region_y=(buf[i]<<8)|buf[i+1]; i+=2;
 
-    if (region_y < miny) { miny=region_y; }
-
-    region_xs[region_id]=region_x;
-    region_ys[region_id]=region_y;
-
+    page.regions[region_id].x=region_x;
+    page.regions[region_id].y=region_y;
+    page.regions[region_id].is_visible=1;
+ 
     printf("<page_region id=\"%02x\" x=\"%d\" y=\"%d\" />\n",region_id,region_x,region_y);
   }  
   printf("</page_regions>\n");
   printf("</page_composition_segment>\n");
+
 }
 
 void process_region_composition_segment() {
-  int segment_type,
-      page_id,
+  int page_id,
       segment_length,
       region_id,
       region_version_number,
@@ -418,6 +429,7 @@ void process_region_composition_segment() {
       foreground_pixel_code,
       background_pixel_code;
   int j;
+  int o;
 
   page_id=(buf[i]<<8)|buf[i+1]; i+=2;
   segment_length=(buf[i]<<8)|buf[i+1]; i+=2;
@@ -439,11 +451,18 @@ void process_region_composition_segment() {
   region_2_bit_pixel_code=(buf[i]&0x0c)>>2;
   i++;
 
+
+  if (regions[region_id].win < 0) {
+    // If the region doesn't exist, then open it.
+    create_region(region_id,region_width,region_height,region_depth);
+    regions[region_id].CLUT_id=CLUT_id;
+  }
+
   if (region_fill_flag==1) {
-    //    fprintf(stderr,"filling image with %d\n",region_4_bit_pixel_code);
-    memset(img,15,sizeof(img));
-    OSDcmd(fd_osd, OSD_SetBlock,0,0,719,height,-1,img);
-    OSDcmd(fd_osd, OSD_Show,0,0,0,0,0,NULL);
+    fprintf(stderr,"filling region %d with %d\n",region_id,region_4_bit_pixel_code);
+    memset(regions[region_id].img,15,sizeof(regions[region_id].img));
+    //    OSDcmd(OSD_SetWindow,regions[region_id].win,0,0,0,0,NULL);
+    //    OSDcmd(OSD_SetBlock,0,0,regions[region_id].width-1,regions[region_id].height-1,-1,regions[region_id].img);
   }
 
   printf("<region_composition_segment page_id=\"0x%02x\" region_id=\"0x%02x\">\n",page_id,region_id);
@@ -458,7 +477,14 @@ void process_region_composition_segment() {
   printf("<region_8_bit_pixel_code>%d</region_8_bit_pixel_code>\n",region_8_bit_pixel_code);
   printf("<region_4_bit_pixel_code>%d</region_4_bit_pixel_code>\n",region_4_bit_pixel_code);
   printf("<region_2_bit_pixel_code>%d</region_2_bit_pixel_code>\n",region_2_bit_pixel_code);
-  
+
+  regions[region_id].objects_start=i;  
+  regions[region_id].objects_end=j;  
+
+  for (o=0;o<65536;o++) {
+    regions[region_id].object_pos[o]=0xffffffff;
+  }
+
   printf("<objects>\n");
   while (i < j) {
     object_id=(buf[i]<<8)|buf[i+1]; i+=2;
@@ -466,8 +492,8 @@ void process_region_composition_segment() {
     object_provider_flag=(buf[i]&0x30)>>4;
     object_x=((buf[i]&0x0f)<<8)|buf[i+1]; i+=2;
     object_y=((buf[i]&0x0f)<<8)|buf[i+1]; i+=2;
-    object_xs[object_id]=object_x+region_xs[region_id];
-    object_ys[object_id]=object_y+region_ys[region_id]-miny;
+
+    regions[region_id].object_pos[object_id]=(object_x<<16)|object_y;
       
     printf("<object id=\"0x%02x\" type=\"0x%02x\">\n",object_id,object_type);
     printf("<object_provider_flag>%d</object_provider_flag>\n",object_provider_flag);
@@ -503,6 +529,7 @@ void process_CLUT_definition_segment() {
       T_value;
 
   int j;
+  int r;
 
   page_id=(buf[i]<<8)|buf[i+1]; i+=2;
   segment_length=(buf[i]<<8)|buf[i+1]; i+=2;
@@ -546,8 +573,14 @@ void process_CLUT_definition_segment() {
     printf("<Cb_value>%d</Cb_value>\n",Cb_value);
     printf("<T_value>%d</T_value>\n",T_value);
     printf("</CLUT_entry>\n");
-    if (CLUT_id==0) {
-      set_palette(CLUT_entry_id,Y_value,Cr_value,Cb_value,255-T_value);
+
+    // Apply CLUT to every region it applies to.
+    for (r=0;r<MAX_REGIONS;r++) {
+      if (regions[r].win >= 0) {
+        if (regions[r].CLUT_id==CLUT_id) {
+          set_palette(r,CLUT_entry_id,Y_value,Cr_value,Cb_value,255-T_value);
+        }
+      }
     }
   }
   printf("</CLUT_entries>\n");
@@ -555,8 +588,7 @@ void process_CLUT_definition_segment() {
 }
 
 void process_object_data_segment() {
-  int segment_type,
-      page_id,
+  int page_id,
       segment_length,
       object_id,
       object_version_number,
@@ -567,6 +599,8 @@ void process_object_data_segment() {
       bottom_field_data_block_length;
       
   int j;
+  int old_i;
+  int r;
 
   page_id=(buf[i]<<8)|buf[i+1]; i+=2;
   segment_length=(buf[i]<<8)|buf[i+1]; i+=2;
@@ -585,33 +619,32 @@ void process_object_data_segment() {
   printf("<object_coding_method>%d</object_coding_method>\n",object_coding_method);
   printf("<non_modifying_colour_flag>%d</non_modifying_colour_flag>\n",non_modifying_colour_flag);
 
-  if (object_coding_method==0) {
-    top_field_data_block_length=(buf[i]<<8)|buf[i+1]; i+=2;
-    bottom_field_data_block_length=(buf[i]<<8)|buf[i+1]; i+=2;
+  fprintf(stderr,"decoding object %d\n",object_id);
+  old_i=i;
+  for (r=0;r<MAX_REGIONS;r++) {
+    // If this object is in this region...
+   if (regions[r].win >= 0) {
+    fprintf(stderr,"testing region %d, object_pos=%08x\n",r,regions[r].object_pos[object_id]);
+    if (regions[r].object_pos[object_id]!=0xffffffff) {
+      fprintf(stderr,"rendering object %d into region %d\n",object_id,r);
+      i=old_i;
+      if (object_coding_method==0) {
+        top_field_data_block_length=(buf[i]<<8)|buf[i+1]; i+=2;
+        bottom_field_data_block_length=(buf[i]<<8)|buf[i+1]; i+=2;
 
-    printf("<pixel_data_sub_block type=\"top\" length=\"0x%04x\"/>\n",top_field_data_block_length);
-    x=object_xs[curr_obj];
-    y=object_ys[curr_obj];
-    process_pixel_data_sub_block(top_field_data_block_length);
+        process_pixel_data_sub_block(r,object_id,0,top_field_data_block_length);
 
-    printf("<pixel_data_sub_block type=\"bottom\" length=\"0x%04x\"/>\n",bottom_field_data_block_length);
-    x=object_xs[curr_obj];
-    y=object_ys[curr_obj]+1;
-    process_pixel_data_sub_block(bottom_field_data_block_length);
-
-    //    OSDcmd(fd_osd, OSD_Hide,0,0,0,0,0,NULL);
-    OSDcmd(fd_osd, OSD_SetBlock,0,0,719,height,-1,img);
-    OSDcmd(fd_osd, OSD_Show,0,0,0,0,0,NULL);
-    usleep(20000);
+        process_pixel_data_sub_block(r,object_id,1,bottom_field_data_block_length);
+      }
+    }
+   }
   }
-  printf("</object_data_segment>\n");
 }
 
 
 int main(int argc, char* argv[]) {
   int n;
   int fd;
-  int x;
   int pid;
   int is_num;
 
@@ -622,6 +655,7 @@ int main(int argc, char* argv[]) {
   unsigned char PTS_1;
   unsigned short PTS_2,PTS_3;
   double PTS_secs;
+  int r; 
 
   int segment_length,
       segment_type;
@@ -636,10 +670,6 @@ int main(int argc, char* argv[]) {
   for (n=0;n<strlen(argv[1]);n++) {
     if (!(isdigit(argv[1][n]))) is_num=0;
   }
-
-  //  open_OSD();
-  //  init_OSD();
-  //  test_OSD();
 
   if (is_num) {
     pid=atoi(argv[1]);
@@ -659,6 +689,14 @@ int main(int argc, char* argv[]) {
       }
     }
   }
+
+  if ((fd_osd=open("/dev/ost/osd",O_RDWR)) < 0) {
+    perror("OSD device, region");
+    exit(-1);
+  }
+  init_data();
+
+  gettimeofday(&start_tv,NULL);
 
   printf("<?xml version=\"1.0\" ?>\n");
   while (1) {
@@ -713,11 +751,6 @@ int main(int argc, char* argv[]) {
         case 0x10: process_page_composition_segment(); 
                    break;
         case 0x11: process_region_composition_segment();
-                   if ((fd_osd < 0) && (miny != 999)) {
-                     fprintf(stderr,"opening osd device, miny=%d\n",miny);
-                     open_OSD();
-                     init_OSD();
-                   }
                    break;
         case 0x12: process_CLUT_definition_segment();
                    break;
@@ -731,39 +764,30 @@ int main(int argc, char* argv[]) {
     }   
     printf("</subtitle_stream>\n");
     printf("</pes_packet>\n");
+    fprintf(stderr,"End of PES packet - time=%.2f\n",PTS_secs);
+    n=0;
+    for (r=0;r<MAX_REGIONS;r++) {
+      if (regions[r].win >= 0) {
+        if (page.regions[r].is_visible) {
+          fprintf(stderr,"displaying region %d at %d,%d width=%d,height=%d\n",r,page.regions[r].x,page.regions[r].y,regions[r].width,regions[r].height);
+          OSDcmd(OSD_SetWindow,regions[r].win,0,0,0,0,NULL);
+          OSDcmd(OSD_SetBlock,0,0,regions[r].width-1,regions[r].height-1,-1,regions[r].img);
+          OSDcmd(OSD_MoveWindow,page.regions[r].x,page.regions[r].y,0,0,0,NULL);
+          n++;
+        } else {
+          fprintf(stderr,"hiding region %d\n",r);
+          OSDcmd(OSD_SetWindow,regions[r].win,0,0,0,0,NULL);
+          OSDcmd(OSD_MoveWindow,720,0,0,0,0,NULL);
+        }
+      }
+    }
+    if (n > 0) {
+      fprintf(stderr,"%d regions visible - showing\n",n);
+      OSDcmd(OSD_Show,0,0,0,0,0,NULL);
+    } else {
+      fprintf(stderr,"%d regions visible - hiding\n",n);
+      OSDcmd(OSD_Hide,0,0,0,0,0,NULL);
+    }
+    if (acquired) { sleep(1); }
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
