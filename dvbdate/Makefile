@@ -7,9 +7,11 @@ NEWSTRUCT=1
 
 ifdef NEWSTRUCT
   CFLAGS += -DNEWSTRUCT
+  INCS=-I ../DVB/include/linux/dvb
+else
+  INCS=-I ../DVB/ost/include
 endif
 
-INCS=-I ../DVB/ost/include
 
 CC=gcc $(INCS)
 all: dvbdate

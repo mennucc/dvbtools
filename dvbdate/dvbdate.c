@@ -47,7 +47,7 @@
 #else
 #include <ost/dmx.h>
 #define DVB_DEMUX_DEVICE "/dev/ost/demux0"
-#define dmx_sct_filter_params dmxSctFilterParams;
+#define dmx_sct_filter_params dmxSctFilterParams
 #endif
 
 /*
