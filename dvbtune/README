@@ -6,8 +6,14 @@ Linux DVB driver (www.linuxtv.org).
 
 This is still very experimental - especially the XML output.
 
-The latest version can be found at www.linuxstb.org.  You can contact
+The latest release can be found at www.linuxstb.org.  You can contact
 the author at <dave@dchapman.com>.
+
+There is also a CVS repository (normally more recent than
+linuxstb.org) available at
+
+http://sourceforge.net/projects/dvbtools
+
 
 Installation
 ------------
@@ -86,6 +92,10 @@ frequencies with -f switch
 John Williams - March 2002.
 
 Added -D diseqc support, and made the 22kHz tone automatic again.
+
+Tomi Ollila - June 2002.
+
+Changes to FINLAND DVB-T tuning, and dvb_defaults.h suggestion.
 
 
 Copyright
