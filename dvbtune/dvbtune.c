@@ -1324,7 +1324,11 @@ int main(int argc, char **argv)
     if (freq< 100000000) {
       printf("<transponder type=\"S\" freq=\"%d\" srate=\"%d\" polarity=\"%c\" >\n",freq,srate,pol);
     } else {
-      printf("<transponder type=\"T\" freq=\"%d\">\n",freq);
+      if (srate!=0) {
+        printf("<transponder type=\"C\" freq=\"%d\" srate=\"%d\">\n",freq,srate);
+      } else {
+        printf("<transponder type=\"T\" freq=\"%d\">\n",freq);
+      }
     }
     scan_pat();
     scan_sdt();
