@@ -17,9 +17,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  * Or, point your browser to http://www.gnu.org/copyleft/gpl.html
- * 
- * The author can be reached at marcus@convergence.de, 
- * the project's page is at http://linuxtv.org/dvb/
+ *
  */
 
 
@@ -53,6 +51,83 @@
 #define HDR_SIZE      9
 #define LPCM_SIZE     7
 #define LEN_CORR      3
+
+/* The "dither" code to convert the 24-bit samples produced by libmad was
+   taken from the coolplayer project - coolplayer.sourceforge.net */
+
+struct dither {
+	mad_fixed_t error[3];
+	mad_fixed_t random;
+};
+# define SAMPLE_DEPTH	16
+# define scale(x, y)	dither((x), (y))
+
+/*
+ * NAME:		prng()
+ * DESCRIPTION:	32-bit pseudo-random number generator
+ */
+static __inline
+unsigned long prng(unsigned long state)
+{
+  return (state * 0x0019660dL + 0x3c6ef35fL) & 0xffffffffL;
+}
+
+/*
+ * NAME:        dither()
+ * DESCRIPTION:	dither and scale sample
+ */
+static __inline
+signed int dither(mad_fixed_t sample, struct dither *dither)
+{
+  unsigned int scalebits;
+  mad_fixed_t output, mask, random;
+
+  enum {
+    MIN = -MAD_F_ONE,
+    MAX =  MAD_F_ONE - 1
+  };
+
+  /* noise shape */
+  sample += dither->error[0] - dither->error[1] + dither->error[2];
+
+  dither->error[2] = dither->error[1];
+  dither->error[1] = dither->error[0] / 2;
+
+  /* bias */
+  output = sample + (1L << (MAD_F_FRACBITS + 1 - SAMPLE_DEPTH - 1));
+
+  scalebits = MAD_F_FRACBITS + 1 - SAMPLE_DEPTH;
+  mask = (1L << scalebits) - 1;
+
+  /* dither */
+  random  = prng(dither->random);
+  output += (random & mask) - (dither->random & mask);
+
+  dither->random = random;
+
+  /* clip */
+  if (output > MAX) {
+    output = MAX;
+
+    if (sample > MAX)
+      sample = MAX;
+  }
+  else if (output < MIN) {
+    output = MIN;
+
+    if (sample < MIN)
+      sample = MIN;
+  }
+
+  /* quantize */
+  output &= ~mask;
+
+  /* error feedback */
+  dither->error[0] = sample - output;
+
+  /* scale */
+  return output >> scalebits;
+}
 
 struct LPCMFrame {
   unsigned char PES[HDR_SIZE];
@@ -88,12 +163,6 @@ mad_timer_t      Timer;
                *OutputPtr=OutputBuffer;
   const unsigned char  *OutputBufferEnd=OutputBuffer+OUTPUT_BUFFER_SIZE;
   int Status=0;
-
-static unsigned short MadFixedToUshort(mad_fixed_t Fixed)
-{
-  Fixed=Fixed>>(MAD_F_FRACBITS-15);
-  return((unsigned short)Fixed);
-}
 
 enum { AUDIO_OSS, AUDIO_MPA, AUDIO_PCM };
 
@@ -382,6 +451,7 @@ void process_args(int argc,char** argv) {
 
 void mad_process() {
 int i;
+static struct dither d0, d1;
 
    while ((Stream.buffer!=NULL) && (Stream.error!=MAD_ERROR_BUFLEN)) {
     if(mad_frame_decode(&Frame,&Stream)) {
@@ -407,7 +477,7 @@ int i;
       unsigned short  Sample;
 
       /* Left channel */
-      Sample=MadFixedToUshort(Synth.pcm.samples[0][i]);
+      Sample=scale(Synth.pcm.samples[0][i],&d0);
       *(OutputPtr++)=Sample&0xff;
       *(OutputPtr++)=Sample>>8;
 
@@ -415,7 +485,7 @@ int i;
        * the right output channel is the same as the left one.
        */
       if(MAD_NCHANNELS(&Frame.header)==2)
-        Sample=MadFixedToUshort(Synth.pcm.samples[1][i]);
+        Sample=scale(Synth.pcm.samples[1][i],&d1);
       *(OutputPtr++)=Sample&0xff;
       *(OutputPtr++)=Sample>>8;
 
