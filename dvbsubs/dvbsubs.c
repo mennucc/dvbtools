@@ -788,6 +788,6 @@ int main(int argc, char* argv[]) {
       fprintf(stderr,"%d regions visible - hiding\n",n);
       OSDcmd(OSD_Hide,0,0,0,0,0,NULL);
     }
-    if (acquired) { sleep(1); }
+//    if (acquired) { sleep(1); }
   }
 }
