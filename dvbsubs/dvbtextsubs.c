@@ -61,7 +61,8 @@ or     dvbtextsubs -vdr pageno\n\n\
 The DVB stream must be piped to dvbtextsubs.  e.g.:\n\n\
 cat 0*.vdr | dvbtextsubs > output.xml\n\n\
 Options: -srt      Output subtitles in Subviewer format\n\
-         -pts      PTS offset (in ms) to add to every PTS in output file\n"
+         -pts      PTS offset (in ms) to add to every PTS in output file\n\
+         -keeppts  Output original PTS values (do not offset from start of file)\n"
 
 typedef enum {
    SUBFORMAT_XML,
@@ -72,6 +73,7 @@ subformat_t subformat;
 
 int debug=0;
 int no_pts_warning=0;
+int keeppts=0;
 
 /* Structure of Transport Stream (from ISO/IEC 13818-1):
 
@@ -354,7 +356,8 @@ void print_page(mag_struct *mag) {
   int i;
 
   subtitle.num_lines=0;
-  subtitle.start_PTS=mag->PTS-FIRST_PTS;
+  subtitle.start_PTS=mag->PTS;
+  if (!keeppts) { subtitle.start_PTS-=FIRST_PTS; }
   subtitle.lang=mag->lang;
 
   if (mag->num_valid_lines>0) {
@@ -582,6 +585,8 @@ int main(int argc, char** argv) {
         pes_format=1;
       } else if (strcmp(argv[i],"-srt")==0) {
         subformat=SUBFORMAT_SUBVIEWER;
+      } else if (strcmp(argv[i],"-keeppts")==0) {
+        keeppts=1;
       } else if (strcmp(argv[i],"-pts")==0) {
         i++;
         USER_PTS=atoi(argv[i]);
