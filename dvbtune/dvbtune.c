@@ -1257,40 +1257,6 @@ int main(int argc, char **argv)
     }
   }
 
-  if (do_monitor) {
-        int32_t strength, ber, snr, uncorr;
-        fe_status_t festatus;
-
-        if((fd_frontend = open(frontenddev[card],O_RDONLY)) < 0){
-                fprintf(stderr,"frontend: %d",i);
-                perror("FRONTEND DEVICE: ");
-                return -1;
-        }
-
-        // Check the signal strength and the BER
-        while (1) {
-                festatus = 0; strength = 0; ber = 0; snr = 0; uncorr = 0;
-                FEReadBER(fd_frontend, &ber);
-                FEReadSignalStrength(fd_frontend, &strength);
-                FEReadSNR(fd_frontend, &snr);
-                FEReadUncorrectedBlocks(fd_frontend, &uncorr);
-                ioctl(fd_frontend,FE_READ_STATUS,&festatus);
-                fprintf(stderr,"Signal=%d, Verror=%d, SNR=%ddB, BlockErrors=%d, (", strength, ber, snr, uncorr);
-#ifndef NEWSTRUCT
-		if (festatus & FE_HAS_POWER) fprintf(stderr,"P|");
-		if (festatus & FE_SPECTRUM_INV) fprintf(stderr,"I|");
-#endif
-		if (festatus & FE_HAS_SIGNAL) fprintf(stderr,"S|");
-		if (festatus & FE_HAS_LOCK) fprintf(stderr,"L|");
-		if (festatus & FE_HAS_CARRIER) fprintf(stderr,"C|");
-		if (festatus & FE_HAS_VITERBI) fprintf(stderr,"V|");
-		if (festatus & FE_HAS_SYNC) fprintf(stderr,"SY|");
-		fprintf(stderr,")\n");
-                sleep(1);
-        }
-  }
-
-
 #if 0
   if (!((freq > 100000000) || ((freq > 0) && (pol!=0) && (srate!=0)))) {
     fprintf(stderr,"Invalid parameters\n");
@@ -1437,6 +1403,40 @@ int main(int argc, char **argv)
       printf("Successfully opened network device, please configure the dvb interface\n");
     }
   }
+
+  if (do_monitor) {
+        int32_t strength, ber, snr, uncorr;
+        fe_status_t festatus;
+
+        if((fd_frontend = open(frontenddev[card],O_RDONLY)) < 0){
+                fprintf(stderr,"frontend: %d",i);
+                perror("FRONTEND DEVICE: ");
+                return -1;
+        }
+
+        // Check the signal strength and the BER
+        while (1) {
+                festatus = 0; strength = 0; ber = 0; snr = 0; uncorr = 0;
+                FEReadBER(fd_frontend, &ber);
+                FEReadSignalStrength(fd_frontend, &strength);
+                FEReadSNR(fd_frontend, &snr);
+                FEReadUncorrectedBlocks(fd_frontend, &uncorr);
+                ioctl(fd_frontend,FE_READ_STATUS,&festatus);
+                fprintf(stderr,"Signal=%d, Verror=%d, SNR=%ddB, BlockErrors=%d, (", strength, ber, snr, uncorr);
+#ifndef NEWSTRUCT
+		if (festatus & FE_HAS_POWER) fprintf(stderr,"P|");
+		if (festatus & FE_SPECTRUM_INV) fprintf(stderr,"I|");
+#endif
+		if (festatus & FE_HAS_SIGNAL) fprintf(stderr,"S|");
+		if (festatus & FE_HAS_LOCK) fprintf(stderr,"L|");
+		if (festatus & FE_HAS_CARRIER) fprintf(stderr,"C|");
+		if (festatus & FE_HAS_VITERBI) fprintf(stderr,"V|");
+		if (festatus & FE_HAS_SYNC) fprintf(stderr,"SY|");
+		fprintf(stderr,")\n");
+                sleep(1);
+        }
+  }
+
 
   close(fd_frontend);
   if (fd_sec) close(fd_sec);
