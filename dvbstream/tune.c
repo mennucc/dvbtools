@@ -26,6 +26,7 @@
 #include <sys/poll.h>
 #include <unistd.h>
 #include <error.h>
+#include <errno.h>
 
 #ifdef NEWSTRUCT
 #include <linux/dvb/dmx.h>
@@ -174,6 +175,7 @@ int check_status(int fd_frontend,struct dvb_frontend_parameters* feparams,int to
   struct dvb_frontend_event event;
   struct dvb_frontend_info fe_info;
   struct pollfd pfd[1];
+  int status;
 
   if (ioctl(fd_frontend,FE_SET_FRONTEND,feparams) < 0) {
     perror("ERROR tuning channel\n");
@@ -189,9 +191,11 @@ int check_status(int fd_frontend,struct dvb_frontend_parameters* feparams,int to
     if (poll(pfd,1,10000)){
       if (pfd[0].revents & POLLIN){
         fprintf(stderr,"Getting frontend event\n");
-        if ( ioctl(fd_frontend, FE_GET_EVENT, &event) < 0){
-          perror("FE_GET_EVENT");
-          return -1;
+        if (status = ioctl(fd_frontend, FE_GET_EVENT, &event) < 0){
+	  if (status != -EOVERFLOW) {
+	    perror("FE_GET_EVENT");
+	    return -1;
+	  }
         }
       }
       print_status(stderr,event.status);
