@@ -71,7 +71,7 @@ change channels.
 -----------------------------
 
 DVBtext was written by Dave Chapman <dave@dchapman.com>.  The latest
-version is available from http://www.linuxstb.org/dvbtext/
+version is available from CVS at http://sourceforge.net/projects/dvbtools/
 
 Thanks to Ralph Metzler for developing the DVB driver, the vbidecode
 package (on which, DVBtext is based), and for answering my questions.
