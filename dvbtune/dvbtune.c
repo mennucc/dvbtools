@@ -469,7 +469,7 @@ void parse_descriptors(int info_len,unsigned char *buf) {
                  {
                    pid = ((buf[i+j] & 0x1f) << 8) | buf[i+j+1];
                    id = (buf[i+j+2] << 8) | buf[i+j+3];
-                   printf("<ca_system_descriptor type=\"seca\" system_id=\"0x%04x\" ecm_pid=\"%d\" ecm_id=\"%06x\">\n",k,pid,id);
+                   printf("<ca_system_descriptor type=\"seca\" system_id=\"0x%04x\" ecm_pid=\"%d\" ecm_id=\"%06x\" />\n",k,pid,id);
                  }        
                  break;
                case VIACCESS_CA_SYSTEM:
@@ -480,7 +480,7 @@ void parse_descriptors(int info_len,unsigned char *buf) {
                    {
                      pid = ((buf[i+2] & 0x1f) << 8) | buf[i+3];
                      id = (buf[i+j+2] << 16) | (buf[i+j+3] << 8) | (buf[i+j+4] & 0xf0);
-                     printf("<ca_system_descriptor type=\"viaccess\" system_id=\"0x%04x\" ecm_pid=\"%d\" ecm_id=\"%06x\">\n",k,pid,id);
+                     printf("<ca_system_descriptor type=\"viaccess\" system_id=\"0x%04x\" ecm_pid=\"%d\" ecm_id=\"%06x\" />\n",k,pid,id);
                    }
                    j += 2+buf[i+j+1];
                  }
@@ -488,23 +488,23 @@ void parse_descriptors(int info_len,unsigned char *buf) {
                case IRDETO_CA_SYSTEM:
                case BETA_CA_SYSTEM:
                  pid = ((buf[i+2] & 0x1f) << 8) | buf[i+3];
-                 printf("<ca_system_descriptor type=\"irdeto\" system_id=\"0x%04x\" ecm_pid=\"%d\">\n",k,pid);
+                 printf("<ca_system_descriptor type=\"irdeto\" system_id=\"0x%04x\" ecm_pid=\"%d\" />\n",k,pid);
                  break;
                case NAGRA_CA_SYSTEM:
                  pid = ((buf[i+2] & 0x1f) << 8) | buf[i+3];
-                 printf("<ca_system_descriptor type=\"nagra\" system_id=\"0x%04x\" ecm_pid=\"%d\">\n",k,pid);
+                 printf("<ca_system_descriptor type=\"nagra\" system_id=\"0x%04x\" ecm_pid=\"%d\" />\n",k,pid);
                  break;
                case CONAX_CA_SYSTEM:
                  pid = ((buf[i+2] & 0x1f) << 8) | buf[i+3];
-                 printf("<ca_system_descriptor type=\"conax\" system_id=\"0x%04x\" ecm_pid=\"%d\">\n",k,pid);
+                 printf("<ca_system_descriptor type=\"conax\" system_id=\"0x%04x\" ecm_pid=\"%d\" />\n",k,pid);
                  break;
                case VIDEOGUARD_CA_SYSTEM:
                  pid = ((buf[i+2] & 0x1f) << 8) | buf[i+3];
-                 printf("<ca_system_descriptor type=\"videoguard\" system_id=\"0x%04x\" ecm_pid=\"%d\">\n",k,pid);
+                 printf("<ca_system_descriptor type=\"videoguard\" system_id=\"0x%04x\" ecm_pid=\"%d\" />\n",k,pid);
                  break;
                default:
                  pid = ((buf[i+2] & 0x1f) << 8) | buf[i+3];
-                 printf("<ca_system_descriptor type=\"unknown\" system_id=\"0x%04x\">\n",k);
+                 printf("<ca_system_descriptor type=\"unknown\" system_id=\"0x%04x\" />\n",k);
                  break;
                }
                i+=descriptor_length;
