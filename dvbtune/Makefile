@@ -1,10 +1,13 @@
-INCS=-I ../DVB/ost/include -I /usr/include/libxml2
+INCS=-I /usr/include/libxml2
 CFLAGS= -Wall $(INCS)
 CC=gcc
 all: dvbtune
 
 ifdef NEWSTRUCT
   CFLAGS += -DNEWSTRUCT
+  INCS += -I ../DVB/include
+else
+  INCS += -I ../DVB/ost/include
 endif
 
 ifdef UK
