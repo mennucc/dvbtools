@@ -7,7 +7,7 @@
 
 #include "pes.h"
 
-extern uint64_t video_pts,first_video_pts,audio_pts,first_audio_pts;
+extern uint64_t audio_pts,first_audio_pts;
 
 ssize_t safe_read(int fd, unsigned char* buf, size_t count) {
   ssize_t n;
@@ -77,10 +77,6 @@ int read_pes_packet (int fd, uint16_t pid, uint8_t* buf, int vdrmode) {
 
         if (stream_id==0xbd) {
           finished=1;
-        } else if (stream_id==0xe0) {
-          tmp_pts=get_pes_pts(buf);
-          if (tmp_pts > video_pts) { video_pts=tmp_pts; }
-          if (first_video_pts==0) { first_video_pts=video_pts; }
         } else if (stream_id==0xc0) {
           tmp_pts=get_pes_pts(buf);
           //fprintf(stdout,"stream_id=%02x, PTS=%lld ms\n",stream_id,tmp_pts);

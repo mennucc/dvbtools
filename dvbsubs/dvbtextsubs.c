@@ -102,8 +102,6 @@ uint64_t PTS=0;
 uint64_t USER_PTS=0;
 uint64_t audio_pts=0;
 uint64_t first_audio_pts=0;
-uint64_t video_pts=0;
-uint64_t first_video_pts=0;
 uint64_t FIRST_PTS=0;
 int sub_count=0;
 
@@ -508,13 +506,12 @@ int process_pes_packet (unsigned char* buf,int n, int the_page) {
     } else {
       //fprintf(stdout,"stream_id=%02x, No PTS\n",stream_id);
       if (no_pts_warning==0) {
-        fprintf(stderr,"WARNING: No PTS value in teletext packet - using audio or video PTS.\n");
-        fprintf(stderr,"First audio PTS=%lld ms, First video PTS=%lld ms\n",first_audio_pts,first_video_pts);
+        fprintf(stderr,"WARNING: No PTS value in teletext packet - using audio PTS.\n");
+        fprintf(stderr,"First audio PTS=%lld ms\n",first_audio_pts);
         no_pts_warning=1;
       }
-//      fprintf(stderr,"here: audio_pts=%lld ms, video_pts=%lld ms\n",audio_pts,video_pts);
       PTS=audio_pts;
-      if (FIRST_PTS==0) { FIRST_PTS=first_video_pts-USER_PTS; }
+      if (FIRST_PTS==0) { FIRST_PTS=first_audio_pts-USER_PTS; }
     }
     k=buf[8]+9;
 //    fprintf(stderr,"PES Header Data Length=%d\n",buf[8]);
