@@ -39,6 +39,7 @@
 // Linux includes:
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <ctype.h>
 #include <sys/ioctl.h>
 #include <sys/poll.h>
@@ -695,8 +696,7 @@ int scan_nit(int x) {
 void scan_pmt(int pid,int sid,int change) {
   int fd_pmt;
   int n,seclen;
-  int i,k;
-  int max_k;
+  int i;
   unsigned char buf[4096];
   struct dmxSctFilterParams sctFilterParams;
   int service_id;
@@ -733,8 +733,7 @@ void scan_pmt(int pid,int sid,int change) {
      close(fd_pmt);
      return;
   }
-  max_k=1;
-for (k=0;k<max_k;k++) {
+
   if (read(fd_pmt,buf,3)==3) {
     seclen=((buf[1] & 0x0f) << 8) | (buf[2] & 0xff);
     n = read(fd_pmt,buf+3,seclen);
@@ -744,7 +743,12 @@ for (k=0;k<max_k;k++) {
       service_id=(buf[3]<<8)|buf[4];
 //      printf("<service id=\"%d\" pmt_pid=\"%d\">\n",service_id,pid);
 
-      max_k=buf[7]+1; // last_sec_num - read this many (+1) sections
+      if (sid != service_id) {
+	close(fd_pmt);
+	scan_pmt(pid, sid, change);
+	return;
+      }
+
       info_len=((buf[10]&0x0f)<<8)|buf[11];
       i=12;
       parse_descriptors(info_len,&buf[i]);
@@ -773,13 +777,12 @@ for (k=0;k<max_k;k++) {
 //      printf("</pmt>\n");
     } else {
       printf("Under-read bytes for PMT - wanted %d, got %d\n",seclen,n);
-      close(fd_pmt);
     }
   } else {
     fprintf(stderr,"Nothing to read from fd_pmt\n");
   }
-}
- close(fd_pmt);
+
+  close(fd_pmt);
 }
 
 void scan_pat() {
