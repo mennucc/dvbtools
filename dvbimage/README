@@ -1,0 +1,83 @@
+DVBimage-0.1
+------------
+
+IMPORTANT NOTE
+--------------
+
+This program will only work with the "standard" DVB driver from
+linuxtv.org.  It won't work with versions of the driver that have the
+"Still Image Patch" applied (for use with VDR).
+
+
+INTRODUCTION
+------------
+
+DVBimage is a program to display still images on a DVB card.  It is
+designed to be used as an Internet webcam viewer.
+
+The latest version can be found at http://www.linuxstb.org/dvbimage/
+
+USAGE
+-----
+
+dvbimage ./script.sh
+
+Where script.sh is a script (or any other executable) that creates a
+file called /tmp/dvbimage.mpg containing a single MPEG-2 I-Frame image
+of size 702x576 pixels.
+
+An example script is as follows:
+
+-- start of script --
+#!/bin/sh
+curl -s http://www.webviews.co.uk/liveimages/latino01.jpg > /tmp/latino1.jpg
+convert -sample 702x576\! /tmp/latino1.jpg /tmp/dvbimage.mpg
+-- end of script --
+
+More examples are in the "scripts" subdirectory.
+
+This script is called every 10 seconds by the dvbimage program, and
+the resulting image displayed on the DVB card.
+
+
+PREREQUISITES
+-------------
+
+The example scripts use the "curl" program to fetch a URL from the
+Internet.  This can be downloaded from:
+
+http://curl.sourceforge.net/
+
+You may (of course) substitute curl with one of the many other
+programs (lynx -source, wget etc) that do the same job.
+
+You also need the "imagemagick" set of utilities which are used to
+convert the image (in nearly any format) to the required MPEG-2
+I-Frame format.
+
+Imagemagick needs the "mpeg2encoder" program to be in the current path
+in order to generate MPEG-2 I-Frames.  This can be downloaded from:
+
+http://www.mpeg.org/MPEG/MSSG/#source
+
+
+COPYRIGHT
+---------
+
+Copyright (C) 2001 Dave Chapman <dave@dchapman.com>
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+
+
