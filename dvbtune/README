@@ -34,6 +34,9 @@ make install
 
 set of commands.
 
+If you are using dvbtune for DVB-T in Finland, you should replace the
+"make" command with "make FINLAND=1".
+
 Once you have installed libxml (if required), then you can compile
 dvbtune and xml2vdr by just typing "make" in the dvbtune directory.
 

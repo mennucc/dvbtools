@@ -142,12 +142,22 @@ int tune_it(int fd_frontend, int fd_sec, unsigned int freq, unsigned int srate, 
     fprintf(stderr,"tuning DVB-T to %d\n",freq);
     feparams.Frequency=freq;
     feparams.u.ofdm.bandWidth=BANDWIDTH_8_MHZ; // WAS: 8
+#ifdef FINLAND
+    feparams.u.ofdm.HP_CodeRate=FEC_1_2;
+    feparams.u.ofdm.LP_CodeRate=FEC_1_2;
+    feparams.u.ofdm.Constellation=QAM_64;  // WAS: 16
+    feparams.u.ofdm.TransmissionMode=TRANSMISSION_MODE_2K;
+    feparams.u.ofdm.guardInterval=GUARD_INTERVAL_1_8;
+    feparams.u.ofdm.HierarchyInformation=HIERARCHY_NONE;
+#else
+    /* UK Parameters */
     feparams.u.ofdm.HP_CodeRate=FEC_2_3;
     feparams.u.ofdm.LP_CodeRate=FEC_1_2;
     feparams.u.ofdm.Constellation=QAM_64;  // WAS: 16
     feparams.u.ofdm.TransmissionMode=TRANSMISSION_MODE_2K;
     feparams.u.ofdm.guardInterval=GUARD_INTERVAL_1_32;
     feparams.u.ofdm.HierarchyInformation=HIERARCHY_NONE;
+#endif
   } else {
     if ((pol=='h') || (pol=='H')) {
       voltage = SEC_VOLTAGE_18;
@@ -171,7 +181,11 @@ int tune_it(int fd_frontend, int fd_sec, unsigned int freq, unsigned int srate, 
     // this is an L-Band frequency
     feparams.Frequency=freq;
   }
+#ifdef FINLAND
+    feparams.Inversion=INVERSION_OFF;
+#else
     feparams.Inversion=specInv;
+#endif
     feparams.u.qpsk.SymbolRate=srate;
     feparams.u.qpsk.FEC_inner=FEC_AUTO;
   

@@ -3,6 +3,10 @@ CFLAGS= -Wall $(INCS)
 CC=gcc
 all: dvbtune
 
+ifdef FINLAND
+  CFLAGS += -DFINLAND
+endif
+
 tune.o: tune.c tune.h
 
 dvbtune: dvbtune.c tune.o
