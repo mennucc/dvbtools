@@ -29,7 +29,7 @@ rtpfeed: rtpfeed.c rtp.o
 rtp.o: rtp.c rtp.h
 	$(CC) $(INCS) $(CFLAGS) -c -o rtp.o rtp.c
 
-tune.o: tune.c tune.h
+tune.o: tune.c tune.h dvb_defaults.h
 	$(CC) $(INCS) $(CFLAGS) -c -o tune.o tune.c
 
 ts_filter: ts_filter.c
