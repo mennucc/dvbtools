@@ -77,6 +77,29 @@ unsigned char next_nibble () {
   return(x);
 }
 
+/* function taken from "dvd2sub.c" in the svcdsubs packages in the
+   vcdimager contribs directory.  Author unknown, but released under GPL2.
+*/
+
+/*
+void palette(int p,int i) {
+ double Y,Cr,Cb,R,G,B;
+ Y=sub[i+0];
+ Cr=sub[i+1];
+ Cb=sub[i+2];
+ B = 1.164*(Y - 16)                    + 2.018*(Cb - 128);
+ G = 1.164*(Y - 16) - 0.813*(Cr - 128) - 0.391*(Cb - 128);
+ R = 1.164*(Y - 16) + 1.596*(Cr - 128);
+ if (B<0) B=0; if (B>255) B=255;
+ if (G<0) G=0; if (G>255) G=255;
+ if (R<0) R=0; if (R>255) R=255;
+ pal[p].r=R;
+ pal[p].g=G;
+ pal[p].b=B; 
+ pal[p].t=sub[i+3];
+}    
+*/
+
 void decode_4bit_pixel_code_string(int n) {
   int next_bits,
       switch_1,
