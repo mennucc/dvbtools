@@ -143,6 +143,8 @@ Thanks to Ragnar Sundblad for his help in adding support for parsing
 teletext subtitles stored in VDR recordings using his ttxtsubs plugin.
 This plugin is available from ftp://ftp.nada.kth.se/pub/home/ragge/vdr/
 
+xml2srt was contributed by Mattias Holmlund.
+
 
 5. COPYRIGHT NOTICE
 -------------------

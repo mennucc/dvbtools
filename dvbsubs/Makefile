@@ -1,5 +1,5 @@
 CC=gcc
-OBJS=dvbsubs dvbtextsubs xml2spumux
+OBJS=dvbsubs dvbtextsubs xml2spumux xml2srt
 CFLAGS+=-Wall
 
 INCS+=-I/usr/include/libxml2 -I/usr/include/freetype2
@@ -23,6 +23,10 @@ pes.o: pes.c pes.h
 
 xml2spumux: xml2spumux.h xml2spumux.c bitmap.o render_freetype.o
 	$(CC) $(INCS) $(CFLAGS) -o xml2spumux xml2spumux.c bitmap.o render_freetype.o -lxml2 -lpng -lfreetype -lm -lz
+
+xml2srt: xml2srt.xslt xml2srt.sh
+	cat xml2srt.sh xml2srt.xslt > xml2srt
+	chmod +x xml2srt
 
 clean:
 	rm -f  *.o *~ $(OBJS)
