@@ -33,10 +33,6 @@
 
 #include "dvb_defaults.h"
 
-#define slof (11700*1000UL)
-#define lof1 (9750*1000UL)
-#define lof2 (10600*1000UL)
-
 int OSTSelftest(int fd)
 {
     int ans;
@@ -192,11 +188,11 @@ int tune_it(int fd_frontend, int fd_sec, unsigned int freq, unsigned int srate, 
 
       if (freq > 2200000) {
         // this must be an absolute frequency
-        if (freq < slof) {
-          feparams.Frequency=(freq-lof1);
+        if (freq < SLOF) {
+          feparams.Frequency=(freq-LOF1);
           if (tone < 0) tone = SEC_TONE_OFF;
         } else {
-          feparams.Frequency=(freq-lof2);
+          feparams.Frequency=(freq-LOF2);
           if (tone < 0) tone = SEC_TONE_ON;
         }
       } else {
@@ -309,7 +305,7 @@ int tune_it(int fd_frontend, int fd_sec, unsigned int freq, unsigned int srate, 
            fprintf(stderr,"Event:  Frequency: %d\n",event.u.completionEvent.Frequency);
            break;
          case FE_QPSK:
-           fprintf(stderr,"Event:  Frequency: %d\n",(unsigned int)((event.u.completionEvent.Frequency)+(tone==SEC_TONE_OFF ? lof1 : lof2)));
+           fprintf(stderr,"Event:  Frequency: %d\n",(unsigned int)((event.u.completionEvent.Frequency)+(tone==SEC_TONE_OFF ? LOF1 : LOF2)));
            fprintf(stderr,"        SymbolRate: %d\n",event.u.completionEvent.u.qpsk.SymbolRate);
            fprintf(stderr,"        FEC_inner:  %d\n",event.u.completionEvent.u.qpsk.FEC_inner);
            fprintf(stderr,"\n");

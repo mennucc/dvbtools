@@ -24,6 +24,17 @@
 #ifndef _DVB_DEFAULTS_H
 #define _DVB_DEFAULTS_H
 
+/* DVB-S */
+
+// With a diseqc system you may need different values per LNB.  I hope
+// no-one ever asks for that :-)
+
+#define SLOF (11700*1000UL)
+#define LOF1 (9750*1000UL)
+#define LOF2 (10600*1000UL)
+
+/* DVB-T */
+
 /* Either uncomment one of the following lines, or add it to your
    "make" command.  e.g.
 
