@@ -167,8 +167,8 @@ int tune_it(int fd_frontend, int fd_sec, unsigned int freq, unsigned int srate, 
       feparams.u.ofdm.TransmissionMode=TRANSMISSION_MODE_2K;
       feparams.u.ofdm.guardInterval=GUARD_INTERVAL_1_32;
       feparams.u.ofdm.HierarchyInformation=HIERARCHY_NONE;
-      break;
 #endif
+      break;
     case FE_QPSK:
       fprintf(stderr,"tuning DVB-S to L-Band:%d, Pol:%c Srate=%d, 22kHz=%s\n",feparams.Frequency,pol,srate,tone == SEC_TONE_ON ? "on" : "off");
       if ((pol=='h') || (pol=='H')) {
