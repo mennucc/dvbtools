@@ -1,0 +1,52 @@
+pesdump - version 0.1
+---------------------
+
+pesdump is a utility for use with the Siemens DVB driver (available
+at http://www.linuxtv.org).
+
+Usage
+-----
+
+1) Tune your DVB card to a channel - e.g. using dvbtune
+ 
+2) Run pesdump with a PID as the only parameter
+
+e.g.
+
+pesdump 643 > recording.pes
+
+to record the stream identified by PID 643.
+
+You can run multiple instances at the same time to record different
+PES streams from the same transponder.
+
+If the PES stream is an audio stream, then you can convert it to a
+format that, for example mpg123, will play using the pes2aud_es
+utility supplied with the DVB driver (in DVB/apps/mpegtools/).
+
+
+3. AUTHOR AND CONTACT DETAILS
+-----------------------------
+
+pesdump was written by Dave Chapman <dave@dchapman.com>.  The latest
+released version is available from http://www.linuxstb.org/pesdump/.
+A CVS repository is available at
+http://sourceforge.net/projects/dvbtools/
+
+
+4. COPYRIGHT NOTICE
+-------------------
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
