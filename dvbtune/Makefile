@@ -1,5 +1,6 @@
 INCS=-I /usr/include/libxml2
 CFLAGS= -Wall $(INCS)
+LDFLAGS=-lxml2
 CC=gcc
 all: dvbtune
 
@@ -18,11 +19,13 @@ ifdef FINLAND2
 endif
 
 tune.o: tune.c tune.h dvb_defaults.h
+si.o: si.c si.h
 
-dvbtune: dvbtune.c tune.o
+dvbtune.o: dvbtune.c tune.h si.h
+
+dvbtune: dvbtune.o tune.o si.o
 
 xml2vdr: xml2vdr.c
-	 $(CC) $(CFLAGS) -o xml2vdr xml2vdr.c -lxml2
 
 clean:
 	rm -f *.o *~ dvbtune xml2vdr
