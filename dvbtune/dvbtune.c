@@ -71,6 +71,7 @@
 #define VIACCESS_2_CA_SYSTEM	0x50000
 #define IRDETO_CA_SYSTEM	0x602
 #define BETA_CA_SYSTEM		0x1702
+#define NAGRA_CA_SYSTEM		0x1800
 
 int fd_demuxv,fd_demuxa,fd_demuxtt,fd_demuxsi,fd_demuxrec,fd_demuxd;
 int pnr=-1;
@@ -466,17 +467,13 @@ void parse_descriptors(int info_len,unsigned char *buf) {
 
              switch(k) {
                case SECA_CA_SYSTEM:
-                 for (j=2;j<descriptor_length;j+=15) {
-                   pid=(buf[i+j]&0x1f<<8)|buf[i+j+1];
-                   id=(buf[i+j+2]<<8) | buf[i+j+3];
-                   printf("ecm_pid=\"0x%04x\" ecm_id=\"0x%04x\"/>\n",pid,id);
-                 }
-                 break;
+               case NAGRA_CA_SYSTEM:
                case VIACCESS_1_CA_SYSTEM:
                  for (j=2;j<descriptor_length;j+=15) {
-                   pid=(buf[i+j]&0x1f<<8)|buf[i+j+1];
+                   pid=((buf[i+j]&0x1f)<<8)|buf[i+j+1];
                    id=(buf[i+j+2]<<8) | buf[i+j+3];
-                   printf("ecm_pid=\"0x%04x\" ecm_id=\"0x%04x\"/>\n",pid,id);
+                   printf("ecm_pid=\"%d\" ecm_id=\"%d\" ",pid,id);
+                   printf("%02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x />\n",buf[i],buf[i+1],buf[i+2],buf[i+3],buf[i+4],buf[i+5],buf[i+6],buf[i+7],buf[i+8],buf[i+9],buf[i+10],buf[i+11],buf[i+12],buf[i+13],buf[i+14]);
                  }
                  break;
                default:
