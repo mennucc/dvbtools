@@ -1,3 +1,24 @@
+/* dvbtune - tune.c
+
+   Copyright (C) Dave Chapman 2001,2002
+  
+   This program is free software; you can redistribute it and/or
+   modify it under the terms of the GNU General Public License
+   as published by the Free Software Foundation; either version 2
+   of the License, or (at your option) any later version.
+
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+   Or, point your browser to http://www.gnu.org/copyleft/gpl.html
+
+*/
+   
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
@@ -10,10 +31,11 @@
 #include <ost/frontend.h>
 #include <ost/frontend.h>
 
+#include "dvb_defaults.h"
+
 #define slof (11700*1000UL)
 #define lof1 (9750*1000UL)
 #define lof2 (10600*1000UL)
-
 
 int OSTSelftest(int fd)
 {
@@ -149,25 +171,13 @@ int tune_it(int fd_frontend, int fd_sec, unsigned int freq, unsigned int srate, 
       fprintf(stderr,"tuning DVB-T to %d\n",freq);
       feparams.Frequency=freq;
       feparams.Inversion=INVERSION_OFF;
-#ifdef FINLAND
-      /* FINLAND Parameters */
-      feparams.u.ofdm.bandWidth=BANDWIDTH_8_MHZ; // WAS: 8
-      feparams.u.ofdm.HP_CodeRate=FEC_1_2;
-      feparams.u.ofdm.LP_CodeRate=FEC_1_2;
-      feparams.u.ofdm.Constellation=QAM_64;  // WAS: 16
-      feparams.u.ofdm.TransmissionMode=TRANSMISSION_MODE_2K;
-      feparams.u.ofdm.guardInterval=GUARD_INTERVAL_1_8;
-      feparams.u.ofdm.HierarchyInformation=HIERARCHY_NONE;
-#else
-      /* UK Parameters */
-      feparams.u.ofdm.bandWidth=BANDWIDTH_8_MHZ; // WAS: 8
-      feparams.u.ofdm.HP_CodeRate=FEC_2_3;
-      feparams.u.ofdm.LP_CodeRate=FEC_1_2;
-      feparams.u.ofdm.Constellation=QAM_64;  // WAS: 16
-      feparams.u.ofdm.TransmissionMode=TRANSMISSION_MODE_2K;
-      feparams.u.ofdm.guardInterval=GUARD_INTERVAL_1_32;
-      feparams.u.ofdm.HierarchyInformation=HIERARCHY_NONE;
-#endif
+      feparams.u.ofdm.bandWidth=BANDWIDTH_DEFAULT;
+      feparams.u.ofdm.HP_CodeRate=HP_CODERATE_DEFAULT;
+      feparams.u.ofdm.LP_CodeRate=LP_CODERATE_DEFAULT;
+      feparams.u.ofdm.Constellation=CONSTELLATION_DEFAULT;
+      feparams.u.ofdm.TransmissionMode=TRANSMISSION_MODE_DEFAULT;
+      feparams.u.ofdm.guardInterval=GUARD_INTERVAL_DEFAULT;
+      feparams.u.ofdm.HierarchyInformation=HIERARCHY_DEFAULT;
       break;
     case FE_QPSK:
       fprintf(stderr,"tuning DVB-S to L-Band:%d, Pol:%c Srate=%d, 22kHz=%s\n",feparams.Frequency,pol,srate,tone == SEC_TONE_ON ? "on" : "off");
