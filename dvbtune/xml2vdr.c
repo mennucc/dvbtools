@@ -59,6 +59,7 @@ int type;
 int ignore_service=0;
 int canal_radio_id;
 int in_audio_stream=0;
+int fta=0;
 
 /* A hack to clean text strings - it breaks on non-UK character sets */
 void my_strcpy(unsigned char* dest, unsigned char* source) {
@@ -157,7 +158,7 @@ static void xmlsat_StartElement(xmlsatParseState *state, const char *name,
         n_apids++;
         in_audio_stream=1;
       }
-    } else if (strcmp(name,"ca_descriptor")==0) {
+    } else if (strcmp(name,"ca_system_descriptor")==0) {
       ca=1;
       for (i=0;attrs[i]!=NULL;i+=2) {
          if (strcmp(attrs[i],"system_id")==0) {
@@ -217,7 +218,7 @@ static void xmlsat_EndElement(xmlsatParseState *state, const char *name) {
     in_audio_stream=0;
   } else if (strcmp(name,"canal_radio")==0) {
 //     if (ca==0) printf("%s:RADIO:%s:%d:%c:%d:%d:%d:%d:%d:%d:%d\n",provider_name,service_name,freq,pol,diseqc,srate,vpid,apid[0],tpid,ca,pnr);
-     if (ca==0) printf("%s (RADIO):%d:%c:%d:%d:%d:%d:%d:%d:%d\n",service_name,freq,pol,diseqc,srate,vpid,apid[0],tpid,ca,pnr);
+    if ((ca==0) || (fta==0)) printf("%s (RADIO):%d:%c:%d:%d:%d:%d:%d:%d:%d\n",service_name,freq,pol,diseqc,srate,vpid,apid[0],tpid,ca,pnr);
      n_apids=0;
      n_ca=0;
   } else if (strcmp(name,"service")==0) {
@@ -225,7 +226,7 @@ static void xmlsat_EndElement(xmlsatParseState *state, const char *name) {
 
      if ((ignore_service==0) && ((type==1) || (type==2))) {  // TV or Radio
        /* Only print service if at least 1 PID is non-zero */
-       if ((vpid!=0) || (n_apids>0) || (tpid!=0)) {
+       if (((ca==0) || (fta==0)) && (((vpid!=0) || (n_apids>0) || (tpid!=0)))) {
 //         printf("%s:%s:%s:%d:%c:%d:%d:%d:",provider_name,((vpid==0) ? "RADIO" : "TV"),service_name,freq,pol,diseqc,srate,vpid);
          printf("%s (%s):%d:%c:%d:%d:%d:",service_name,((vpid==0) ? "RADIO" : "TV"),freq,pol,diseqc,srate,vpid);
          x=0;
@@ -249,11 +250,11 @@ static void xmlsat_EndElement(xmlsatParseState *state, const char *name) {
              }
            }
          }
-         if (n_ca==0) {
+         printf(":%d",tpid);
+         if (ca==0) {
            printf(":0");
          } else {
            printf(":1");
-//           printf(":%d:",tpid);
 //           for (i=0;i<n_ca;i++) {
 //             if (i>0) printf(",");
 //             printf("%s",ca_systems[i]);
@@ -330,10 +331,17 @@ int main(int argc, char **argv) {
   xmlParserCtxtPtr ctxt;
   xmlsatParseState state;
 
-  if (argc!=2) {
-    printf("Usage: %s filename.xmlsat\n",argv[0]);
+  if (argc<2) {
+    printf("Usage: %s [-fta] filename.xmlsat\n",argv[0]);
   } else {
-    ctxt = (xmlParserCtxtPtr)xmlCreateFileParserCtxt(argv[1]);
+    if (argc==2) {
+      ctxt = (xmlParserCtxtPtr)xmlCreateFileParserCtxt(argv[1]);
+    } else if (argc==3) {
+      if (strcmp(argv[1],"-fta")==0) {
+        fta=1;
+      }
+      ctxt = (xmlParserCtxtPtr)xmlCreateFileParserCtxt(argv[2]);
+    }
     if (ctxt == NULL) {
       fprintf(stderr,"ERROR: can not open file\n");
     }

@@ -2,7 +2,7 @@
 
    dvbtune - a program for tuning DVB TV and Radio channels.
 
-   Initial transponders:
+   Initial transponders for "-x" option:
 
    Astra   28E:  
    Astra   19E: 12670v - srate 22000
@@ -438,6 +438,9 @@ void parse_descriptors(int info_len,unsigned char *buf) {
                    id=(buf[i+j+2]<<8) | buf[i+j+3];
                    printf("ecm_pid=\"0x%04x\" ecm_id=\"0x%04x\"/>\n",pid,id);
                  }
+                 break;
+               default:
+                 printf(" />\n");
                  break;
              }
              i+=descriptor_length;
