@@ -442,7 +442,7 @@ int main(int argc, char **argv)
   /* Output: {uni,multi,broad}cast socket */
   char ipOut[20];
   int portOut;
-  int ttl;
+  int ttl = 2;
   
   pids_map = NULL;
   map_cnt = 0;
@@ -496,6 +496,7 @@ int main(int argc, char **argv)
     fprintf(stderr,"-bw N       DVB-T bandwidth (Mhz) - N=6%s, 7%s or 8%s\n",(BANDWIDTH_DEFAULT==BANDWIDTH_6_MHZ ? " (default)" : ""),(BANDWIDTH_DEFAULT==BANDWIDTH_7_MHZ ? " (default)" : ""),(BANDWIDTH_DEFAULT==BANDWIDTH_8_MHZ ? " (default)" : ""));
     fprintf(stderr,"-tm N       DVB-T transmission mode - N=2%s or 8%s\n",(TRANSMISSION_MODE_DEFAULT==TRANSMISSION_MODE_2K ? " (default)" : ""),(TRANSMISSION_MODE_DEFAULT==TRANSMISSION_MODE_8K ? " (default)" : ""));
     fprintf(stderr,"-hy N       DVB-T hierarchy - N=1%s, 2%s, 4%s, NONE%s or AUTO%s\n",(HIERARCHY_DEFAULT==HIERARCHY_1 ? " (default)" : ""),(HIERARCHY_DEFAULT==HIERARCHY_2 ? " (default)" : ""),(HIERARCHY_DEFAULT==HIERARCHY_4 ? " (default)" : ""),(HIERARCHY_DEFAULT==HIERARCHY_NONE ? " (default)" : ""),(HIERARCHY_DEFAULT==HIERARCHY_AUTO ? " (default)" : ""));
+    fprintf(stderr,"-ttl N      Sets TTL to N (default: 2) when streaming in RTP\n");
 
     fprintf(stderr,"\n-analyse    Perform a simple analysis of the bitrates of the PIDs in the transport stream\n");
 
@@ -725,6 +726,9 @@ int main(int argc, char **argv)
           fprintf(stderr,"Invalid HIERARCHY: %s\n",argv[i]);
           exit(0);
         }
+      } else if (strcmp(argv[i],"-ttl")==0) {
+        i++;
+	ttl = atoi(argv[i]);
       } else if (strcmp(argv[i],"-from")==0) {
         i++;
         if (map_cnt) {
