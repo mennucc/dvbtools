@@ -15,8 +15,10 @@
 #define fe_code_rate_t CodeRate
 #define fe_transmit_mode_t TransmitMode
 #define fe_guard_interval_t GuardInterval
-#define fe_bandwidth_t Bandwidth
+#define fe_bandwidth_t BandWidth
 #define fe_sec_voltage_t SecVoltage
+#define dmx_pes_filter_params dmxPesFilterParams
+#define dmx_sct_filter_params dmxSctFilterParams
 #endif
 
 #include "dvb_defaults.h"
