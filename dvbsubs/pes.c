@@ -17,7 +17,7 @@ ssize_t safe_read(int fd, unsigned char* buf, size_t count) {
 }
 
 char pts_text[30];
-char* pts2hmsu(uint64_t pts) {
+char* pts2hmsu(uint64_t pts,char sep) {
   int h,m,s,u;
 
   h=(pts/(1000*60*60));
@@ -25,7 +25,7 @@ char* pts2hmsu(uint64_t pts) {
   s=(pts/1000)-(h*3600)-(m*60);
   u=pts-(h*1000*60*60)-(m*1000*60)-(s*1000);
 
-  sprintf(pts_text,"%d:%02d:%02d.%03d",h,m,s,u);
+  sprintf(pts_text,"%d:%02d:%02d%c%03d",h,m,s,sep,u);
   return(pts_text);
 }
 

@@ -238,10 +238,10 @@ void print_xml(FILE* fd, subtitle_t* subtitle) {
 //    fprintf(fd,"First_char[%d]=%d, last_char[%d]=%d\n",row,subtitle->first_char[row],row,subtitle->last_char[row]);
   }
 
-  fprintf(fd,"    <spu lang=\"%s\" start=\"%s\"",langs[subtitle->lang],pts2hmsu(subtitle->start_PTS));
-  fprintf(stderr,"%s\r",pts2hmsu(subtitle->start_PTS));
+  fprintf(fd,"    <spu lang=\"%s\" start=\"%s\"",langs[subtitle->lang],pts2hmsu(subtitle->start_PTS,'.'));
+  fprintf(stderr,"%s\r",pts2hmsu(subtitle->start_PTS,'.'));
   if (subtitle->has_end_pts) {
-    fprintf(fd," end=\"%s\"",pts2hmsu(subtitle->end_PTS));
+    fprintf(fd," end=\"%s\"",pts2hmsu(subtitle->end_PTS,'.'));
   }
   fprintf(fd,">\n");
   
@@ -311,9 +311,9 @@ void print_subviewer(FILE* fd, subtitle_t* subtitle) {
 //    fprintf(fd,"First_char[%d]=%d, last_char[%d]=%d\n",row,subtitle->first_char[row],row,subtitle->last_char[row]);
   }
 
-  fprintf(stderr,"%s\r",pts2hmsu(subtitle->start_PTS));
-  fprintf(fd,"%d\n%s --> ",++sub_count,pts2hmsu(subtitle->start_PTS));
-  fprintf(fd,"%s\n",pts2hmsu(subtitle->end_PTS));
+  fprintf(stderr,"%s\r",pts2hmsu(subtitle->start_PTS,','));
+  fprintf(fd,"%d\n%s --> ",++sub_count,pts2hmsu(subtitle->start_PTS,','));
+  fprintf(fd,"%s\n",pts2hmsu(subtitle->end_PTS,','));
   
   j=0;
   for (row=0;row<subtitle->num_lines;row++) {

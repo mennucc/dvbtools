@@ -573,7 +573,7 @@ int main(int argc, char* argv[]) {
     PTS=get_pes_pts(buf);
     if (first_PTS==0) { first_PTS=PTS; }
 
-    fprintf(stderr,"%s\r",pts2hmsu(PTS-first_PTS));
+    fprintf(stderr,"%s\r",pts2hmsu(PTS-first_PTS,'.'));
 
 
     PES_header_data_length=buf[8];
@@ -640,7 +640,7 @@ int main(int argc, char* argv[]) {
       }
       if (n) {
         sprintf(filename,"sub%05d.png",fileno++);
-        fprintf(stdout,"<spu start=\"%s\" image=\"%s\" />\n",pts2hmsu(PTS-first_PTS),filename);
+        fprintf(stdout,"<spu start=\"%s\" image=\"%s\" />\n",pts2hmsu(PTS-first_PTS,'.'),filename);
         save_png(filename);
       }
     }
