@@ -36,29 +36,20 @@
 // DVB includes:
 #include <ost/osd.h>
 
-int OSDcmd(int fd, OSD_Command cmd, int x0, int y0, int x1, int y1, int color, void* data) {
-  osd_cmd_t osd;
-  int res;
-
-  osd.cmd=cmd;
-  osd.x0=x0;
-  osd.y0=y0;
-  osd.x1=x1;
-  osd.y1=y1;
-  osd.color=color;
-  osd.data=data;
-  if ((res=ioctl(fd,OSD_SEND_CMD,&osd))!=0) {
-    perror("OSDCmd");
-  }
-}
-
 int y=0;
 int x=0;
 
 int minx=0;
-int miny=452;
+int miny=0;
 int width=720;
-int height=96;
+int height=226;
+
+unsigned int object_xs[65536];
+unsigned int object_ys[65536];
+unsigned int curr_obj;
+unsigned int region_xs[64];
+unsigned int region_ys[64];
+unsigned int curr_reg[64];
 
 unsigned char white[4]={255,255,255,0xff};
 unsigned char green[4]={0,255,0,0xdf} ;
@@ -69,6 +60,22 @@ unsigned char red[4]={255,0,0,0xbf} ;
 unsigned char magenta[4]={255,0,255,0xff};
 unsigned char othercol[4]={0,255,255,0xff};
 
+unsigned char trans[16][4]={ {255,255,255,0},
+                             {255,255,255,0},
+                             {255,255,255,0},
+                             {255,255,255,0},
+                             {255,255,255,0},
+                             {255,255,255,0},
+                             {255,255,255,0},
+                             {255,255,255,0},
+                             {255,255,255,0},
+                             {255,255,255,0},
+                             {255,255,255,0},
+                             {255,255,255,0},
+                             {255,255,255,0},
+                             {255,255,255,0},
+                             {255,255,255,0},
+                             {255,255,255,0} } ;
 
 unsigned char buf[100000];
 int i=0;
@@ -78,6 +85,24 @@ int in_scanline=0;
 unsigned char img[720*576];
 
 int fd_osd;
+
+int OSDcmd(int fd, OSD_Command cmd, int x0, int y0, int x1, int y1, int color, void* data) {
+  osd_cmd_t osd;
+  int res;
+
+  if (fd_osd > 0) {
+    osd.cmd=cmd;
+    osd.x0=x0;
+    osd.y0=y0;
+    osd.x1=x1;
+    osd.y1=y1;
+    osd.color=color;
+    osd.data=data;
+    if ((res=ioctl(fd,OSD_SEND_CMD,&osd))!=0) {
+      perror("OSDCmd");
+    }
+  }
+}
 
 int open_OSD() {
   if ((fd_osd=open("/dev/ost/osd",O_RDWR)) < 0) {
@@ -89,19 +114,23 @@ int open_OSD() {
 }
 
 int init_OSD() {
+  int i;
   if (fd_osd) {
     OSDcmd(fd_osd, OSD_Open,minx,miny,minx+width,miny+height,4,NULL);
     OSDcmd(fd_osd, OSD_Hide,0,0,0,0,0,NULL);
     OSDcmd(fd_osd, OSD_Clear,0,0,0,0,0,NULL);
-    OSDcmd(fd_osd, OSD_SetPalette,0,0,0,0,0,green); /* Bg colour */
-    OSDcmd(fd_osd, OSD_SetPalette,1,0,0,0,1,blue);
-    OSDcmd(fd_osd, OSD_SetPalette,2,0,0,0,2,black);
-    OSDcmd(fd_osd, OSD_SetPalette,3,0,0,0,3,magenta);
-    OSDcmd(fd_osd, OSD_SetPalette,4,0,0,0,4,white);
-    OSDcmd(fd_osd, OSD_SetPalette,5,0,0,0,5,yellow);
-    OSDcmd(fd_osd, OSD_SetPalette,6,0,0,0,6,red);
-    OSDcmd(fd_osd, OSD_SetPalette,7,0,0,0,7,othercol);
-    OSDcmd(fd_osd, OSD_SetPalette,8,0,0,0,8,blue);
+//    OSDcmd(fd_osd, OSD_SetPalette,0,0,0,0,0,green); /* Bg colour */
+//    OSDcmd(fd_osd, OSD_SetPalette,1,0,0,0,1,blue);
+//    OSDcmd(fd_osd, OSD_SetPalette,2,0,0,0,2,black);
+//    OSDcmd(fd_osd, OSD_SetPalette,3,0,0,0,3,magenta);
+//    OSDcmd(fd_osd, OSD_SetPalette,4,0,0,0,4,white);
+//    OSDcmd(fd_osd, OSD_SetPalette,5,0,0,0,5,yellow);
+//    OSDcmd(fd_osd, OSD_SetPalette,6,0,0,0,6,red);
+//    OSDcmd(fd_osd, OSD_SetPalette,7,0,0,0,7,othercol);
+//    OSDcmd(fd_osd, OSD_SetPalette,8,0,0,0,8,blue);
+    for (i=15;i>=0;i--) {
+      OSDcmd(fd_osd, OSD_SetPalette,i,0,0,0,i,trans);
+    }
   }
 }
 
@@ -111,8 +140,12 @@ int test_OSD() {
 
 void do_plot(int x, int y, unsigned char pixel) {
   int i;
-  i=(y*720)+x;
-  img[i]=pixel;
+  if ((y >= 0) && (y < height)) {
+    i=(y*720)+x;
+    img[i]=pixel;
+  } else {
+    fprintf(stderr,"plot out of region: x=%d, y=%d\n",x,y);
+  }
 }
 
 void plot(int run_length, unsigned char pixel) {
@@ -187,7 +220,7 @@ void set_palette(int id,int Y_value, int Cr_value, int Cb_value, int T_value) {
  colour[1]=B;
  colour[2]=G;
  colour[3]=T_value;
- OSDcmd(fd_osd, OSD_SetPalette,id,0,0,0,id,colour);
+ if (id < 15) OSDcmd(fd_osd, OSD_SetPalette,id,0,0,0,id,colour);
 }    
 
 void decode_4bit_pixel_code_string(int n) {
@@ -300,7 +333,8 @@ void process_pixel_data_sub_block(int n) {
                  break;
       case 0xf0: printf("</scanline>\n");
                  in_scanline=0;
-                 x=0; y+=2;
+                 x=object_xs[curr_obj];
+                 y+=2;
                  break;
       default: fprintf(stderr,"unimplemented data_type %02x in pixel_data_sub_block\n",data_type);
     }
@@ -346,6 +380,9 @@ void process_page_composition_segment() {
     i++; // reserved
     region_x=(buf[i]<<8)|buf[i+1]; i+=2;
     region_y=(buf[i]<<8)|buf[i+1]; i+=2;
+
+    region_xs[region_id]=region_x;
+    region_ys[region_id]=region_y;
 
     printf("<page_region id=\"%02x\" x=\"%d\" y=\"%d\" />\n",region_id,region_x,region_y);
   }  
@@ -397,6 +434,13 @@ void process_region_composition_segment() {
   region_2_bit_pixel_code=(buf[i]&0x0c)>>2;
   i++;
 
+  if (region_fill_flag==1) {
+    //    fprintf(stderr,"filling image with %d\n",region_4_bit_pixel_code);
+    memset(img,15,sizeof(img));
+    OSDcmd(fd_osd, OSD_SetBlock,0,0,719,height,-1,img);
+    OSDcmd(fd_osd, OSD_Show,0,0,0,0,0,NULL);
+  }
+
   printf("<region_composition_segment page_id=\"0x%02x\" region_id=\"0x%02x\">\n",page_id,region_id);
 
   printf("<region_version_number>%d</region_version_number>\n",region_version_number);
@@ -417,6 +461,8 @@ void process_region_composition_segment() {
     object_provider_flag=(buf[i]&0x30)>>4;
     object_x=((buf[i]&0x0f)<<8)|buf[i+1]; i+=2;
     object_y=((buf[i]&0x0f)<<8)|buf[i+1]; i+=2;
+    object_xs[object_id]=object_x+region_xs[region_id];
+    object_ys[object_id]=object_y+region_ys[region_id]-miny;
       
     printf("<object id=\"0x%02x\" type=\"0x%02x\">\n",object_id,object_type);
     printf("<object_provider_flag>%d</object_provider_flag>\n",object_provider_flag);
@@ -495,7 +541,9 @@ void process_CLUT_definition_segment() {
     printf("<Cb_value>%d</Cb_value>\n",Cb_value);
     printf("<T_value>%d</T_value>\n",T_value);
     printf("</CLUT_entry>\n");
-    set_palette(CLUT_entry_id,Y_value,Cr_value,Cb_value,255-T_value);
+    if (CLUT_id==0) {
+      set_palette(CLUT_entry_id,Y_value,Cr_value,Cb_value,255-T_value);
+    }
   }
   printf("</CLUT_entries>\n");
   printf("</CLUT_definition_segment>\n");
@@ -520,6 +568,7 @@ void process_object_data_segment() {
   j=i+segment_length;
   
   object_id=(buf[i]<<8)|buf[i+1]; i+=2;
+  curr_obj=object_id;
   object_version_number=(buf[i]&0xf0)>>4;
   object_coding_method=(buf[i]&0x0c)>>2;
   non_modifying_colour_flag=(buf[i]&0x02)>>1;
@@ -536,18 +585,19 @@ void process_object_data_segment() {
     bottom_field_data_block_length=(buf[i]<<8)|buf[i+1]; i+=2;
 
     printf("<pixel_data_sub_block type=\"top\" length=\"0x%04x\"/>\n",top_field_data_block_length);
-
-    y=0; x=0;
+    x=object_xs[curr_obj];
+    y=object_ys[curr_obj];
     process_pixel_data_sub_block(top_field_data_block_length);
 
     printf("<pixel_data_sub_block type=\"bottom\" length=\"0x%04x\"/>\n",bottom_field_data_block_length);
-    y=1; x=0;
+    x=object_xs[curr_obj];
+    y=object_ys[curr_obj]+1;
     process_pixel_data_sub_block(bottom_field_data_block_length);
 
-    OSDcmd(fd_osd, OSD_SetBlock,0,0,719,95,-1,img);
-    memset(img,0,sizeof(img));
+    //    OSDcmd(fd_osd, OSD_Hide,0,0,0,0,0,NULL);
+    OSDcmd(fd_osd, OSD_SetBlock,0,0,719,height,-1,img);
     OSDcmd(fd_osd, OSD_Show,0,0,0,0,0,NULL);
-    sleep(1);
+    //    usleep(20000);
   }
   printf("</object_data_segment>\n");
 }
@@ -594,10 +644,14 @@ int main(int argc, char* argv[]) {
     }
     set_filt(fd,pid,DMX_PES_OTHER); 
   } else {
-    fd=open(argv[1],O_RDONLY);
-    if (fd <= 0) {
-      fprintf(stderr,"can't open file\n");
-      exit(0);
+    if (!strcmp(argv[1],"-")) {
+      fd=0;
+    } else {
+      fd=open(argv[1],O_RDONLY);
+      if (fd < 0) {
+        fprintf(stderr,"can't open file\n");
+        exit(0);
+      }
     }
   }
 
