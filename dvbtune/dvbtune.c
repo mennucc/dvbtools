@@ -1398,7 +1398,11 @@ int main(int argc, char **argv)
     netif.pid = dpid;
     netif.if_num = 0;  // always choosen the next free number
 
+#ifdef NEWSTRUCT
     sprintf(devnamen,"/dev/ost/net%d",dev);
+#else
+    sprintf(devnamen,"/dev/dvb/adapter%d/net0",dev);
+#endif
     //printf("Trying to open %s\n",devnamen);
     if((fdn = open(devnamen,O_RDWR|O_NONBLOCK)) < 0) {
       fprintf(stderr, "Failed to open DVB NET DEVICE");
