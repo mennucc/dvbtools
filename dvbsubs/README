@@ -1,7 +1,8 @@
 DVBsubs
 -------
 
-Program to decode DVB subtitles (ETS 300 743).
+Program to decode DVB subtitles (ETS 300 743).  This standard can be
+freely downloaded from http://www.etsi.org/
 
 This program is still an alpha version (i.e. incomplete) and attempts
 to decode subtitles using a DVB card's OSD and also dumps the data to
@@ -19,6 +20,11 @@ dvbsubs PID
 
 to read a PES stream from a DVB card and decode the subtitles.
 
+For testing, you can use either my "pesdump" program to save a
+subtitle stream to a pes file, or:
+
+dvbstream [options] -o PID > file.ts
+mpegtools/ts2pes PID < file.ts > file.pes
 
 Copyright
 ---------
