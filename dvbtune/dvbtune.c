@@ -66,12 +66,13 @@
 
 #include "tune.h"
 
-#define SECA_CA_SYSTEM	0x100
-#define VIACCESS_1_CA_SYSTEM	0x500
-#define VIACCESS_2_CA_SYSTEM	0x50000
-#define IRDETO_CA_SYSTEM	0x602
-#define BETA_CA_SYSTEM		0x1702
-#define NAGRA_CA_SYSTEM		0x1800
+#define SECA_CA_SYSTEM          0x0100
+#define VIACCESS_CA_SYSTEM      0x0500
+#define IRDETO_CA_SYSTEM        0x0600
+#define VIDEOGUARD_CA_SYSTEM    0x0900
+#define BETA_CA_SYSTEM          0x1700
+#define NAGRA_CA_SYSTEM         0x1800
+#define CONAX_CA_SYSTEM         0x0b00
 
 int fd_demuxv,fd_demuxa,fd_demuxtt,fd_demuxsi,fd_demuxrec,fd_demuxd;
 int pnr=-1;
@@ -461,27 +462,54 @@ void parse_descriptors(int info_len,unsigned char *buf) {
              break;
 
            case 0x09: // ca_descriptor
-             k=(buf[i]<<8)|buf[i+1];
-             printf("<ca_system_descriptor system_id=\"0x%02x%02x\" ",buf[i],buf[i+1]);
-
-             switch(k) {
+             k=((buf[i]<<8)|buf[i+1]);
+             switch(k&0xff00) {
                case SECA_CA_SYSTEM:
-               case NAGRA_CA_SYSTEM:
-               case VIACCESS_1_CA_SYSTEM:
-                 for (j=2;j<descriptor_length;j+=15) {
-                   pid=((buf[i+j]&0x1f)<<8)|buf[i+j+1];
-                   id=(buf[i+j+2]<<8) | buf[i+j+3];
-                   printf("ecm_pid=\"%d\" ecm_id=\"%d\" ",pid,id);
-                   printf("%02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x />\n",buf[i],buf[i+1],buf[i+2],buf[i+3],buf[i+4],buf[i+5],buf[i+6],buf[i+7],buf[i+8],buf[i+9],buf[i+10],buf[i+11],buf[i+12],buf[i+13],buf[i+14]);
+                 for (j=2; j<descriptor_length; j+=15)
+                 {
+                   pid = ((buf[i+j] & 0x1f) << 8) | buf[i+j+1];
+                   id = (buf[i+j+2] << 8) | buf[i+j+3];
+                   printf("<ca_system_descriptor type=\"seca\" system_id=\"0x%04x\" ecm_pid=\"%d\" ecm_id=\"%06x\">\n",k,pid,id);
+                 }        
+                 break;
+               case VIACCESS_CA_SYSTEM:
+                 j = 4;
+                 while (j < descriptor_length)
+                 {
+                   if (buf[i+j]==0x14)
+                   {
+                     pid = ((buf[i+2] & 0x1f) << 8) | buf[i+3];
+                     id = (buf[i+j+2] << 16) | (buf[i+j+3] << 8) | (buf[i+j+4] & 0xf0);
+                     printf("<ca_system_descriptor type=\"viaccess\" system_id=\"0x%04x\" ecm_pid=\"%d\" ecm_id=\"%06x\">\n",k,pid,id);
+                   }
+                   j += 2+buf[i+j+1];
                  }
                  break;
-               default:
-                 printf(" />\n");
+               case IRDETO_CA_SYSTEM:
+               case BETA_CA_SYSTEM:
+                 pid = ((buf[i+2] & 0x1f) << 8) | buf[i+3];
+                 printf("<ca_system_descriptor type=\"irdeto\" system_id=\"0x%04x\" ecm_pid=\"%d\">\n",k,pid);
                  break;
-             }
-             i+=descriptor_length;
-             descriptor_length=0;
-             break;
+               case NAGRA_CA_SYSTEM:
+                 pid = ((buf[i+2] & 0x1f) << 8) | buf[i+3];
+                 printf("<ca_system_descriptor type=\"nagra\" system_id=\"0x%04x\" ecm_pid=\"%d\">\n",k,pid);
+                 break;
+               case CONAX_CA_SYSTEM:
+                 pid = ((buf[i+2] & 0x1f) << 8) | buf[i+3];
+                 printf("<ca_system_descriptor type=\"conax\" system_id=\"0x%04x\" ecm_pid=\"%d\">\n",k,pid);
+                 break;
+               case VIDEOGUARD_CA_SYSTEM:
+                 pid = ((buf[i+2] & 0x1f) << 8) | buf[i+3];
+                 printf("<ca_system_descriptor type=\"videoguard\" system_id=\"0x%04x\" ecm_pid=\"%d\">\n",k,pid);
+                 break;
+               default:
+                 pid = ((buf[i+2] & 0x1f) << 8) | buf[i+3];
+                 printf("<ca_system_descriptor type=\"unknown\" system_id=\"0x%04x\">\n",k);
+                 break;
+               }
+               i+=descriptor_length;
+               descriptor_length=0;
+               break;
 
            case 0x40: // network_name
 //             printf("<network_name tag=\"0x40\">");
@@ -596,7 +624,8 @@ void parse_descriptors(int info_len,unsigned char *buf) {
                printf("%s",xmlify(buf[i]));
                printf("%s",xmlify(buf[i+1]));
                printf("%s",xmlify(buf[i+2]));
-               printf("\" type=\"%d\" page=\"%d%02x\" />\n",(buf[i+3]&0xf8)>>3,(buf[i+3]&0x07),buf[i+4]);
+               k=(buf[i+3]&0x07);
+               printf("\" type=\"%d\" page=\"%d%02x\" />\n",(buf[i+3]&0xf8)>>3,(k==0 ? 8 : k),buf[i+4]);
                i+=5;
                j+=5;
              }
