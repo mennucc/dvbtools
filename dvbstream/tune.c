@@ -21,6 +21,7 @@
    
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <ctype.h>
 #include <sys/ioctl.h>
 #include <sys/poll.h>
@@ -573,13 +574,13 @@ if (diseqc==0) if (ioctl(fd_frontend,FE_SET_VOLTAGE,voltage) < 0) {
       feparams.inversion=INVERSION_OFF;
       feparams.u.qam.symbol_rate = srate;
       feparams.u.qam.fec_inner = FEC_AUTO;
-      feparams.u.qam.modulation = QAM_64;
+      feparams.u.qam.modulation = modulation;
 #else
       feparams.Frequency=freq;
       feparams.Inversion=INVERSION_OFF;
       feparams.u.qam.SymbolRate = srate;
       feparams.u.qam.FEC_inner = FEC_AUTO;
-      feparams.u.qam.QAM = QAM_64;
+      feparams.u.qam.QAM = modulation;
 #endif
       break;
     default:
