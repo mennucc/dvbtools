@@ -173,6 +173,12 @@ int check_status(int fd_frontend,int type, struct dvb_frontend_parameters* fepar
            fprintf(stderr,"        SymbolRate: %d\n",feparams->u.qpsk.symbol_rate);
            fprintf(stderr,"        FEC_inner:  %d\n",feparams->u.qpsk.fec_inner);
            break;
+#ifdef DVB_ATSC
+	case FE_ATSC:
+	   fprintf(stderr, "Event:  Frequency: %d\n",feparams->frequency);
+	   fprintf(stderr, "        Modulation: %d\n",feparams->u.vsb.modulation);
+	   break;
+#endif
          default:
            break;
         }
@@ -260,6 +266,13 @@ int tune_it(int fd_frontend, unsigned int freq, unsigned int srate, char pol, in
       feparams.u.qam.fec_inner = FEC_AUTO;
       feparams.u.qam.modulation = modulation;
       break;
+#ifdef DVB_ATSC
+    case FE_ATSC:
+      fprintf(stderr, "tuning ATSC to %d, modulation=%d\n",freq,modulation);
+      feparams.frequency=freq;
+      feparams.u.vsb.modulation = modulation;
+      break;
+#endif
     default:
       fprintf(stderr,"Unknown FE type. Aborting\n");
       exit(-1);
