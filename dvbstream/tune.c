@@ -69,7 +69,7 @@ int tune_it(int fd_frontend, int fd_sec, unsigned long freq, unsigned long srate
      fprintf(stderr,"Channel tuned\n");
   }
 
-  usleep(5000000);
+//  usleep(5000000);
   i=10;
 
   res = ioctl(fd_frontend, FE_GET_EVENT, &event);
@@ -97,11 +97,6 @@ int tune_it(int fd_frontend, int fd_sec, unsigned long freq, unsigned long srate
     fprintf(stderr,"        SymbolRate: %ld\n",event.u.completionEvent.u.qpsk.SymbolRate);
     fprintf(stderr,"        FEC_inner:  %d\n",event.u.completionEvent.u.qpsk.FEC_inner);
     fprintf(stderr,"\n");
-
-    ioctl(fd_frontend,FE_READ_STATUS,&feparams);
-    fprintf(stderr,"Status: iFrequency: %ld\n",(feparams.Frequency)+(tone==SEC_TONE_OFF ? lof1 : lof2));
-    fprintf(stderr,"        SymbolRate: %ld\n",feparams.u.qpsk.SymbolRate);
-    fprintf(stderr,"        FEC_inner:  %d\n",feparams.u.qpsk.FEC_inner);
   }
 
   strength=0;
