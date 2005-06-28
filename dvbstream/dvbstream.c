@@ -527,7 +527,16 @@ int main(int argc, char **argv)
 	}
         i++;
         strcpy(ipOut,argv[i]);
-      } else if (strcmp(argv[i],"-r")==0) {
+      } else if(strcmp(argv[i],"-auto")==0) {
+        modulation = QAM_AUTO;
+        TransmissionMode = TRANSMISSION_MODE_AUTO;
+        guardInterval = GUARD_INTERVAL_AUTO;
+        HP_CodeRate = FEC_AUTO;
+        LP_CodeRate = FEC_AUTO;
+        hier = HIERARCHY_AUTO;
+	specInv = INVERSION_AUTO;
+      }
+      else if (strcmp(argv[i],"-r")==0) {
         if(pids_map != NULL) {
 	  fprintf(stderr, "ERROR! -i and -r can't be used with -o and -net.  Use -net instead\n");
 	  exit(1);
