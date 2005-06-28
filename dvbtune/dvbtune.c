@@ -682,7 +682,8 @@ int main(int argc, char **argv)
   fe_transmit_mode_t TransmissionMode=TRANSMISSION_MODE_DEFAULT;
   fe_bandwidth_t bandWidth=BANDWIDTH_DEFAULT;
   fe_guard_interval_t guardInterval=GUARD_INTERVAL_DEFAULT;
-  fe_code_rate_t HP_CodeRate=HP_CODERATE_DEFAULT;
+  fe_code_rate_t HP_CodeRate=HP_CODERATE_DEFAULT, LP_CodeRate=LP_CODERATE_DEFAULT;
+  fe_hierarchy_t hier=HIERARCHY_DEFAULT;
   int count;
   transponder_t * t;
 
@@ -767,6 +768,14 @@ int main(int argc, char **argv)
             pol='R';
           }
         }
+      } else if(strcmp(argv[i],"-auto")==0) {
+        modulation = QAM_AUTO;
+        TransmissionMode = TRANSMISSION_MODE_AUTO;
+        guardInterval = GUARD_INTERVAL_AUTO;
+        HP_CodeRate = FEC_AUTO;
+        LP_CodeRate = FEC_AUTO;
+        hier = HIERARCHY_AUTO;
+        specInv = INVERSION_AUTO; 
       } else if (strcmp(argv[i],"-s")==0) {
         i++;
         srate=atoi(argv[i])*1000UL;
