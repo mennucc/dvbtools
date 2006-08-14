@@ -74,6 +74,10 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 /* Signal handling code shamelessly copied from VDR by Klaus Schmidinger 
    - see http://www.cadsoft.de/people/kls/vdr/index.htm */
 
+unsigned int SLOF=(11700*1000UL);
+unsigned int LOF1=(9750*1000UL);
+unsigned int LOF2=(10600*1000UL);
+
 char* frontenddev[4]={"/dev/dvb/adapter0/frontend0","/dev/dvb/adapter1/frontend0","/dev/dvb/adapter2/frontend0","/dev/dvb/adapter3/frontend0"};
 char* dvrdev[4]={"/dev/dvb/adapter0/dvr0","/dev/dvb/adapter1/dvr0","/dev/dvb/adapter2/dvr0","/dev/dvb/adapter3/dvr0"};
 char* demuxdev[4]={"/dev/dvb/adapter0/demux0","/dev/dvb/adapter1/demux0","/dev/dvb/adapter2/demux0","/dev/dvb/adapter3/demux0"};
@@ -480,6 +484,9 @@ int main(int argc, char **argv)
     fprintf(stderr,"\nStandard tuning options:\n\n");
     fprintf(stderr,"-f freq     absolute Frequency (DVB-S in Hz or DVB-T in Hz)\n");
     fprintf(stderr,"            or L-band Frequency (DVB-S in Hz or DVB-T in Hz)\n");
+    fprintf(stderr,"-SL slof    S-LOF(DVB-S only)\n");
+    fprintf(stderr,"-L1 LOF1    LOF1(DVB-S only)\n");
+    fprintf(stderr,"-L2 LOF2    LOF2(DVB-S only)\n");
     fprintf(stderr,"-p [H,V]    Polarity (DVB-S only)\n");
     fprintf(stderr,"-s N        Symbol rate (DVB-S or DVB-C)\n");
 
@@ -591,7 +598,19 @@ int main(int argc, char **argv)
             pol='H';
           }
         }
-      } 
+      } else if (strcmp(argv[i],"-SL")==0) {
+        i++;
+        SLOF=atoi(argv[i]);
+        SLOF*=1000UL;
+      } else if (strcmp(argv[i],"-L1")==0) {
+        i++;
+        LOF1=atoi(argv[i]);
+        LOF1*=1000UL;
+      } else if (strcmp(argv[i],"-L2")==0) {
+        i++;
+        LOF2=atoi(argv[i]);
+        LOF2*=1000UL;
+      }
       else if (strcmp(argv[i],"-s")==0) {
         i++;
         srate=atoi(argv[i])*1000UL;

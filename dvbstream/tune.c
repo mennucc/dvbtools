@@ -253,7 +253,8 @@ int tune_it(int fd_frontend, unsigned int freq, unsigned int srate, char pol, in
 	  base = 0;
       }
 
-      fprintf(stderr,"tuning DVB-S to Freq: %u, Pol:%c Srate=%d, 22kHz tone=%s, LNB: %d\n",feparams.frequency,pol,srate,tone == SEC_TONE_ON ? "on" : "off", diseqc);
+      fprintf(stderr,"tuning DVB-S to Freq: %u, Pol:%c Srate=%d, 22kHz tone=%s, LNB: %d, SLOF %d, LOF1: %d, LOF2: %d\n",
+          feparams.frequency,pol,srate,tone == SEC_TONE_ON ? "on" : "off", diseqc, SLOF/1000UL, LOF1/1000UL, LOF2/1000UL);
       feparams.inversion=specInv;
       feparams.u.qpsk.symbol_rate=srate;
       feparams.u.qpsk.fec_inner=FEC_AUTO;
