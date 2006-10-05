@@ -818,6 +818,8 @@ int main(int argc, char **argv)
             if(pids_map[map_cnt-1].pids[j] == pid) found = 1;
           }
           if (found == 0) {
+            if(pid==8192)
+              fprintf(stderr, "Adding whole transport stream to map n. %d\n", map_cnt-1);
             pids_map[map_cnt-1].pids[pids_map[map_cnt-1].pid_cnt] = pid;
             pids_map[map_cnt-1].pid_cnt++;
           }
@@ -1031,7 +1033,7 @@ int main(int argc, char **argv)
                if ( ((pids_map[i].start_time==-1) || (pids_map[i].start_time <= now))
 		    && ((pids_map[i].end_time==-1) || (pids_map[i].end_time >= now))) {
                  for (j = 0; j < MAX_CHANNELS; j++) {
-                   if (pids_map[i].pids[j] == pid) {
+                   if (pids_map[i].pids[j] == 8192 || pids_map[i].pids[j] == pid) {
                      errno = 0;
 		     if(pids_map[i].filename)
                         write(pids_map[i].fd, buf, TS_SIZE);
@@ -1045,6 +1047,7 @@ int main(int argc, char **argv)
 			memcpy(&(pids_map[i].buf[pids_map[i].pos]), buf, bytes_read);
 			pids_map[i].pos += bytes_read;
 		     }
+                     break;
                    }
                  }
                }
