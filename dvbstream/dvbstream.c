@@ -514,7 +514,8 @@ int main(int argc, char **argv)
     fprintf(stderr,"NOTE: Use pid1=8192 to broadcast whole TS stream from a budget card\n");
     return(-1);
   } else {
-    npids=0;
+    pids[0]=0;
+    npids=1;
     pestype=DMX_PES_OTHER;  // Default PES type
     for (i=1;i<argc;i++) {
       if (strcmp(argv[i],"-ps")==0) {
@@ -818,6 +819,10 @@ int main(int argc, char **argv)
             if(pids_map[map_cnt-1].pids[j] == pid) found = 1;
           }
           if (found == 0) {
+            if(pids_map[map_cnt-1].pid_cnt==0) {
+              pids_map[map_cnt-1].pids[0]=0;
+              pids_map[map_cnt-1].pid_cnt++;
+            }
             if(pid==8192)
               fprintf(stderr, "Adding whole transport stream to map n. %d\n", map_cnt-1);
             pids_map[map_cnt-1].pids[pids_map[map_cnt-1].pid_cnt] = pid;
