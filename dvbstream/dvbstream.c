@@ -417,6 +417,127 @@ typedef struct {
 pids_map_t *pids_map;
 int map_cnt;
 
+typedef struct {
+  unsigned char *buf;
+  unsigned int pos;
+  unsigned int len;
+} section_t;
+
+typedef struct {
+  int program;
+  int pmt_pid;
+} pat_entry;
+
+static struct {
+  int len;	//section length
+  int version;
+  section_t section;
+  pat_entry *entries;
+  int entries_cnt;
+} PAT;
+
+
+static int collect_section(section_t *section, int pusi, unsigned char *buf, unsigned int len)
+{
+  int skip, slen;
+  unsigned char *ptr;
+
+  if(section->buf==NULL)
+  {
+    if(!pusi)
+      return 0;
+    section->buf = malloc(4096);
+    section->len = 4096;
+    section->pos = 0;
+  }
+
+  if(section->pos + len > 4096)
+    return 0;
+
+  memcpy(&(section->buf[section->pos]), buf, len);
+  section->pos += len;
+
+  if(section->len < 3)
+    return 0;
+
+  skip = section->buf[0];
+  if(skip + 4 > section->pos)
+    return 0;
+
+  ptr = &(section->buf[skip + 1]);
+  slen = ((ptr[1] & 0x0f) << 8) | ptr[2];
+  if(section->pos < (skip+1+3+slen))
+    return 0;
+
+  return skip+1;
+}
+
+
+static int parse_pat(int pusi, unsigned char *b, int l)
+{
+  unsigned int i, j, vers, seclen, num, len, skip;
+  unsigned char *buf;
+
+  skip = collect_section(&PAT.section, pusi, b, l);
+  if(!skip)
+    return 0;
+
+  //now we know the section is complete
+  PAT.section.pos = 0;
+  buf = &(PAT.section.buf[skip]);
+
+  if(buf[0] != 0) //pat id
+    return 0;
+  if(!(buf[5] & 1)) //not yet valid
+    return 0;
+
+  vers = (buf[5] >> 1) & 0x1F;
+  if(PAT.version == vers) //PAT didn't change
+    return 1;
+
+  seclen = ((buf[1] & 0x0F) << 8) | buf[2];
+  num = (seclen - 9) / 4;
+  if(PAT.entries_cnt != num)
+  {
+    PAT.entries = realloc(PAT.entries, num);
+    PAT.entries_cnt = num;
+  }
+
+  i = 8;
+  j = 0;
+  for(j=0; j<num; j++)
+  {
+    PAT.entries[j].program = (buf[i] << 8) | buf[i+1];
+    PAT.entries[j].pmt_pid = ((buf[i+2] & 0x1F) << 8) | buf[i+3];
+    i += 4;
+    //fprintf(stderr, "PROGRAM: %d, pmt_pid: %d\n", PAT.entries[j].program, PAT.entries[j].pmt_pid);
+  }
+
+  PAT.version = vers;
+
+  return 1;
+}
+
+
+static void parse_ts_packet(unsigned char *buf)
+{
+  int pid, l, af, pusi;
+
+  if(buf[0] != 0x47)
+    return 0;
+  pusi = buf[1] & 0x40;
+  pid = ((buf[1] & 0x1F) << 8) | buf[2];
+  af = (buf[3] >> 4) & 0x03;
+  l = 4;
+  if(af == 2) //only adaption
+    return 0;
+  else if(af == 3)
+    l += buf[4] + 1;
+
+  if(pid == 0)
+    parse_pat(pusi, &buf[l], TS_SIZE - l);
+}
+
 int main(int argc, char **argv)
 {
   //  state_t state=STREAM_OFF;
@@ -462,6 +583,8 @@ int main(int argc, char **argv)
     lo_mappids[i]=(i&0xff);
     counts[i]=0;
   }
+  memset(&PAT, 0, sizeof(PAT));
+  PAT.version = -1;
 
   /* Set default IP and port */
   strcpy(ipOut,"224.0.1.2");
