@@ -417,10 +417,11 @@ typedef struct {
 pids_map_t *pids_map;
 int map_cnt;
 
+//1024 section payload +1 pointer +256 pointer value
+#define SECTION_LEN 1281
 typedef struct {
-  unsigned char *buf;
+  unsigned char buf[SECTION_LEN];
   unsigned int pos;
-  unsigned int len;
 } section_t;
 
 typedef struct {
@@ -442,25 +443,14 @@ static int collect_section(section_t *section, int pusi, unsigned char *buf, uns
   int skip, slen;
   unsigned char *ptr;
 
-  if(section->buf==NULL)
-  {
-    if(!pusi)
-      return 0;
-    section->buf = malloc(4096);
-    section->len = 4096;
-    section->pos = 0;
-  }
   if(pusi)
     section->pos = 0;
 
-  if(section->pos + len > 4096)
+  if(section->pos + len > SECTION_LEN)
     return 0;
 
   memcpy(&(section->buf[section->pos]), buf, len);
   section->pos += len;
-
-  if(section->len < 3)
-    return 0;
 
   skip = section->buf[0];
   if(skip + 4 > section->pos)
