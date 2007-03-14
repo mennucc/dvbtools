@@ -577,6 +577,7 @@ int main(int argc, char **argv)
   }
   memset(&PAT, 0, sizeof(PAT));
   PAT.version = -1;
+  PAT.section.pos = SECTION_LEN+1;
 
   /* Set default IP and port */
   strcpy(ipOut,"224.0.1.2");
