@@ -450,6 +450,8 @@ static int collect_section(section_t *section, int pusi, unsigned char *buf, uns
     section->len = 4096;
     section->pos = 0;
   }
+  if(pusi)
+    section->pos = 0;
 
   if(section->pos + len > 4096)
     return 0;
