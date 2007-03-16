@@ -479,7 +479,7 @@ static int collect_section(section_t *section, int pusi, unsigned char *buf, uns
 
 static int parse_pat(int pusi, unsigned char *b, int l)
 {
-  unsigned int i, j, vers, seclen, num, len, skip;
+  unsigned int i, j, vers, seclen, num, skip;
   unsigned char *buf;
 
   skip = collect_section(&PAT.section, pusi, b, l);
@@ -568,7 +568,7 @@ static int parse_pmt(int pusi, pmt_t *pmt, unsigned char *b, int l)
   pmt->version = version;
 }
 
-static void parse_ts_packet(unsigned char *buf)
+static int parse_ts_packet(unsigned char *buf)
 {
   int pid, l, af, pusi;
 
