@@ -437,6 +437,18 @@ static struct {
   int entries_cnt;
 } PAT;
 
+#define MAX_PIDS 202
+typedef struct {
+  section_t section;
+  int version;
+  int pids[MAX_PIDS];
+  int pids_cnt;
+} pmt_t;
+
+struct {
+  pmt_t *entries;
+  int cnt;
+} PMT;
 
 static int collect_section(section_t *section, int pusi, unsigned char *buf, unsigned int len)
 {
@@ -510,6 +522,51 @@ static int parse_pat(int pusi, unsigned char *b, int l)
   return 1;
 }
 
+static int parse_pmt(int pusi, pmt_t *pmt, unsigned char *b, int l)
+{
+  unsigned int i, version, seclen, skip, prog, pcr_pid, pid;
+  unsigned char *buf;
+
+  skip = collect_section(&(pmt->section), pusi, b, l);
+
+  if(!skip)
+    return 0;
+
+  //now we know the section is complete
+  pmt->section.pos = 0;
+  pmt->pids_cnt = 0;
+  buf = &(pmt->section.buf[skip]);
+
+  if(buf[0] != 2) //pmt id
+    return 0;
+  if(!(buf[5] & 1)) //not yet valid
+    return 0;
+
+  prog = (buf[3] << 8) | buf[4];
+  version = (buf[5] >> 1) & 0x1F;
+
+  if(pmt->version == version) //PMT didn't change
+    return 1;
+
+  seclen = ((buf[1] & 0x0F) << 8) | buf[2];
+  pcr_pid = ((buf[8] & 0x1F) << 8) | buf[9];
+  pmt->pids[pmt->pids_cnt++] = pcr_pid;
+  fprintf(stderr, "\nPROGRAM: %d, pcr_pid: %d, version: %d vs %d\n", prog, pcr_pid, pmt->version, version);
+  skip = ((buf[10] & 0x0F) << 8) | buf[11];
+  if(skip+12 > seclen)
+    return 0;
+
+  i = skip+12;
+  while(i+5<seclen)
+  {
+    pid = ((buf[i+1] & 0x1F) << 8) | buf[i+2];
+    pmt->pids[pmt->pids_cnt++] = pid;
+    skip = ((buf[i+3] & 0x0F) << 8) | buf[i+4];
+    i += skip+5;
+    fprintf(stderr, "prog %d, PID: %d, count: %d, type: 0x%x\n", prog, pid, pmt->pids_cnt, buf[i]);
+  }
+  pmt->version = version;
+}
 
 static void parse_ts_packet(unsigned char *buf)
 {
