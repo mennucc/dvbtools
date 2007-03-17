@@ -505,6 +505,9 @@ static int parse_pat(int pusi, unsigned char *b, int l)
   {
     PAT.entries = realloc(PAT.entries, num);
     PAT.entries_cnt = num;
+    PMT.entries = realloc(PMT.entries, sizeof(pmt_t)*num);
+    if(!PMT.entries) return 0;
+    PMT.cnt = num;
   }
 
   i = 8;
@@ -515,6 +518,8 @@ static int parse_pat(int pusi, unsigned char *b, int l)
     PAT.entries[j].pmt_pid = ((buf[i+2] & 0x1F) << 8) | buf[i+3];
     i += 4;
     //fprintf(stderr, "PROGRAM: %d, pmt_pid: %d\n", PAT.entries[j].program, PAT.entries[j].pmt_pid);
+    PMT.entries[j].section.pos = SECTION_LEN+1;
+    PMT.entries[j].version = -1;
   }
 
   PAT.version = vers;
@@ -635,6 +640,7 @@ int main(int argc, char **argv)
   memset(&PAT, 0, sizeof(PAT));
   PAT.version = -1;
   PAT.section.pos = SECTION_LEN+1;
+  memset(&PMT, 0, sizeof(PMT));
 
   /* Set default IP and port */
   strcpy(ipOut,"224.0.1.2");
