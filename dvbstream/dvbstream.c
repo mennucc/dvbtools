@@ -503,7 +503,7 @@ static int parse_pat(int pusi, unsigned char *b, int l)
   num = (seclen - 9) / 4;
   if(PAT.entries_cnt != num)
   {
-    PAT.entries = realloc(PAT.entries, num);
+    PAT.entries = realloc(PAT.entries, sizeof(pat_entry)*num);
     PAT.entries_cnt = num;
     PMT.entries = realloc(PMT.entries, sizeof(pmt_t)*num);
     if(!PMT.entries) return 0;
