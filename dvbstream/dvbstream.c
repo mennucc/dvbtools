@@ -399,6 +399,7 @@ void my_ts_to_ps( uint8_t* buf, uint16_t pida, uint16_t pidv)
 
 typedef uint8_t PID_BIT_MAP[1024];
 static PID_BIT_MAP SI_PIDS;
+static PID_BIT_MAP USER_PIDS;
 
 
 typedef struct {
@@ -455,14 +456,18 @@ struct {
   int cnt;
 } PMT;
 
+static int SI_fd[MAX_CHANNELS];
+static int SI_fd_cnt = 0;
+
 #define getbit(buf, pid) (buf[(pid)/8] & (1 << ((pid) % 8)))
 #define setbit(buf, pid) buf[(pid)/8] |= (1 << ((pid) % 8))
 #define clearbits(buf) memset(buf, 0, sizeof(PID_BIT_MAP))
 #define setallbits(buf) memset(buf, 0xFF, sizeof(PID_BIT_MAP))
+#define min(x, y) ((x) <= (y) ? (x) : (y))
 
 void update_bitmaps()
 {
-  int i, j;
+  int i, j, k, n;
 
   for(i = 0; i < map_cnt; i++)
   {
@@ -477,7 +482,18 @@ void update_bitmaps()
         break;
       }
       setbit(pids_map[i].pidmap, pids_map[i].pids[j]);
-      //fprintf(stderr, "MAP: %d, PID: %d\n", i, pids_map[i].pids[j]);
+      for(k = 0; k < PMT.cnt; k++)
+      {
+        for(n = 0; n < PMT.entries[k].pids_cnt; n++)
+        {
+          if(PMT.entries[k].pids[n] == pids_map[i].pids[j])
+          {
+            //add the pmt_pid to the map
+            //fprintf(stderr, "ADDING TO map %d PMT n. %d with PID: %d, j: %d\n", i, k, PAT.entries[k].pmt_pid, j);
+            setbit(pids_map[i].pidmap, PAT.entries[k].pmt_pid);
+          }
+        }
+      }
     }
   }
 }
@@ -560,7 +576,33 @@ static int parse_pat(int pusi, unsigned char *b, int l)
 
   PAT.version = vers;
 
-  return 1;
+  return 2;
+}
+
+static void add_pmt_pids()
+{
+  int i;
+  PID_BIT_MAP simap;
+
+  for(i = 0; i < SI_fd_cnt; i++)
+    close(SI_fd[i]);
+
+  clearbits(simap);
+  setbit(simap, 0);
+  for(i=0; i<min(PAT.entries_cnt, MAX_CHANNELS); i++)
+  {
+    if(getbit(USER_PIDS, PAT.entries[i].pmt_pid)) continue;
+    if(getbit(simap, PAT.entries[i].pmt_pid)) continue;
+    if((SI_fd[i] = open(demuxdev[card], O_RDWR|O_NONBLOCK)) < 0)
+    {
+      fprintf(stderr,"COULDN'T OPEN DEMUX %i: for pid: %d", i, PAT.entries[i].pmt_pid);
+      return 0;
+    }
+    //fprintf(stderr, "\nADDED PMT PID: %d\n", PAT.entries[i].pmt_pid);
+    set_ts_filt(SI_fd[i], PAT.entries[i].pmt_pid, DMX_PES_OTHER);
+    setbit(simap, PAT.entries[i].pmt_pid);
+    SI_fd_cnt++;
+  }
 }
 
 static int parse_pmt(int pusi, pmt_t *pmt, unsigned char *b, int l)
@@ -607,6 +649,7 @@ static int parse_pmt(int pusi, pmt_t *pmt, unsigned char *b, int l)
     //fprintf(stderr, "prog %d, PID: %d, count: %d, type: 0x%x\n", prog, pid, pmt->pids_cnt, buf[i]);
   }
   pmt->version = version;
+  return 2;
 }
 
 static int parse_ts_packet(unsigned char *buf)
@@ -625,7 +668,10 @@ static int parse_ts_packet(unsigned char *buf)
     l += buf[4] + 1;
 
   if(pid == 0)
-    parse_pat(pusi, &buf[l], TS_SIZE - l);
+  {
+    if(parse_pat(pusi, &buf[l], TS_SIZE - l) == 2)
+      add_pmt_pids();
+  }
   else
   {
     int i;
@@ -634,7 +680,8 @@ static int parse_ts_packet(unsigned char *buf)
     {
       if(pid==PAT.entries[i].pmt_pid)
       {
-        parse_pmt(pusi, &PMT.entries[i], &buf[l], TS_SIZE - l);
+        if(parse_pmt(pusi, &PMT.entries[i], &buf[l], TS_SIZE - l) == 2)
+          update_bitmaps();
       }
     }
   }
@@ -691,6 +738,8 @@ int main(int argc, char **argv)
   memset(&PMT, 0, sizeof(PMT));
   clearbits(SI_PIDS);
   setbit(SI_PIDS, 0);
+  clearbits(USER_PIDS);
+  setbit(USER_PIDS, 0);
 
   /* Set default IP and port */
   strcpy(ipOut,"224.0.1.2");
@@ -1052,8 +1101,10 @@ int main(int argc, char **argv)
               pids_map[map_cnt-1].pids[0]=0;
               pids_map[map_cnt-1].pid_cnt++;
             }
-            if(pid==8192)
+            if(pid==8192) {
               fprintf(stderr, "Adding whole transport stream to map n. %d\n", map_cnt-1);
+              setallbits(USER_PIDS);
+            }
             pids_map[map_cnt-1].pids[pids_map[map_cnt-1].pid_cnt] = pid;
             pids_map[map_cnt-1].pid_cnt++;
           }
@@ -1147,7 +1198,10 @@ int main(int argc, char **argv)
   }
 
   /* Now we set the filters */
-  for (i=0;i<npids;i++) set_ts_filt(fd[i],pids[i],pestypes[i]);
+  for (i=0;i<npids;i++) {
+    set_ts_filt(fd[i],pids[i],pestypes[i]);
+    setbit(USER_PIDS, pids[i]);
+  }
 
   gettimeofday(&tv,(struct timezone*) NULL);
   real_start_time=tv.tv_sec;
@@ -1263,6 +1317,7 @@ int main(int argc, char **argv)
            int pid, i, j;
 
            pid = ((buf[1] & 0x1f) << 8) | buf[2];
+           if(getbit(SI_PIDS, pid)) parse_ts_packet(buf);
            if (pids_map != NULL)        {
              for (i = 0; i < map_cnt; i++) {
                if ( ((pids_map[i].start_time==-1) || (pids_map[i].start_time <= now))
