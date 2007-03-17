@@ -426,7 +426,7 @@ int map_cnt;
 //1024 section payload +1 pointer +256 pointer value
 #define SECTION_LEN 1281
 typedef struct {
-  unsigned char buf[SECTION_LEN];
+  uint8_t buf[SECTION_LEN];
   unsigned int pos;
 } section_t;
 
@@ -499,10 +499,10 @@ void update_bitmaps()
 }
 
 
-static int collect_section(section_t *section, int pusi, unsigned char *buf, unsigned int len)
+static int collect_section(section_t *section, int pusi, uint8_t *buf, unsigned int len)
 {
   int skip, slen;
-  unsigned char *ptr;
+  uint8_t *ptr;
 
   if(pusi)
     section->pos = 0;
@@ -526,10 +526,10 @@ static int collect_section(section_t *section, int pusi, unsigned char *buf, uns
 }
 
 
-static int parse_pat(int pusi, unsigned char *b, int l)
+static int parse_pat(int pusi, uint8_t *b, int l)
 {
   unsigned int i, j, vers, seclen, num, skip;
-  unsigned char *buf;
+  uint8_t *buf;
 
   skip = collect_section(&PAT.section, pusi, b, l);
   if(!skip)
@@ -605,10 +605,10 @@ static void add_pmt_pids()
   }
 }
 
-static int parse_pmt(int pusi, pmt_t *pmt, unsigned char *b, int l)
+static int parse_pmt(int pusi, pmt_t *pmt, uint8_t *b, int l)
 {
   unsigned int i, version, seclen, skip, prog, pcr_pid, pid;
-  unsigned char *buf;
+  uint8_t *buf;
 
   skip = collect_section(&(pmt->section), pusi, b, l);
 
@@ -652,7 +652,7 @@ static int parse_pmt(int pusi, pmt_t *pmt, unsigned char *b, int l)
   return 2;
 }
 
-static int parse_ts_packet(unsigned char *buf)
+static int parse_ts_packet(uint8_t *buf)
 {
   int pid, l, af, pusi;
 
@@ -695,7 +695,7 @@ int main(int argc, char **argv)
 #endif
   int fd_dvr;
   int i,j;
-  unsigned char buf[MTU];
+  uint8_t buf[MTU];
   struct pollfd pfds[2];  // DVR device and Telnet connection
   unsigned int secs = -1;
   unsigned long freq=0;
