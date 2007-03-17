@@ -1184,6 +1184,12 @@ int main(int argc, char **argv)
   
   fprintf(stderr,"dvbstream will stop after %d seconds (%d minutes)\n",secs,secs/60);
 
+  for(i=0; i<npids; i++) {
+    if(pids[i] == 8192) {
+      npids = 1;
+      pids[0] = 8192;
+    }
+  }
   for (i=0;i<npids;i++) {  
     if((fd[i] = open(demuxdev[card],O_RDWR|O_NONBLOCK)) < 0){
       fprintf(stderr,"FD %i: ",i);
