@@ -397,6 +397,10 @@ void my_ts_to_ps( uint8_t* buf, uint16_t pida, uint16_t pidv)
 }
 
 
+typedef uint8_t PID_BIT_MAP[1024];
+static PID_BIT_MAP SI_PIDS;
+
+
 typedef struct {
   char *filename;
   int fd;
@@ -450,13 +454,10 @@ struct {
   int cnt;
 } PMT;
 
-typedef uint8_t PID_BIT_MAP[1024];
-
 #define getbit(buf, pid) (buf[(pid)/8] & (1 << ((pid) % 8)))
 #define setbit(buf, pid) buf[(pid)/8] |= (1 << ((pid) % 8))
 #define clearbits(buf) memset(buf, 0, sizeof(PID_BIT_MAP))
 
-static PID_BIT_MAP SI_PIDS;
 
 static int collect_section(section_t *section, int pusi, unsigned char *buf, unsigned int len)
 {
