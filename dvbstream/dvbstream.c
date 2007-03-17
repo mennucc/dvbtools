@@ -596,7 +596,7 @@ static void add_pmt_pids()
     if((SI_fd[i] = open(demuxdev[card], O_RDWR|O_NONBLOCK)) < 0)
     {
       fprintf(stderr,"COULDN'T OPEN DEMUX %i: for pid: %d", i, PAT.entries[i].pmt_pid);
-      return 0;
+      return;
     }
     //fprintf(stderr, "\nADDED PMT PID: %d\n", PAT.entries[i].pmt_pid);
     set_ts_filt(SI_fd[i], PAT.entries[i].pmt_pid, DMX_PES_OTHER);
@@ -1320,7 +1320,7 @@ int main(int argc, char **argv)
        bytes_read = read(fd_dvr, buf, TS_SIZE);
        if(bytes_read > 0) {
          if(buf[0] == 0x47) {
-           int pid, i, j;
+           int pid, i;
 
            pid = ((buf[1] & 0x1f) << 8) | buf[2];
            if(getbit(SI_PIDS, pid)) parse_ts_packet(buf);
