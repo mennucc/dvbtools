@@ -407,6 +407,7 @@ typedef struct {
   int pids[MAX_CHANNELS];
   int num;
   int pid_cnt;
+  PID_BIT_MAP pidmap;
   long start_time; // in seconds
   long end_time;   // in seconds
   int socket;
@@ -457,6 +458,29 @@ struct {
 #define getbit(buf, pid) (buf[(pid)/8] & (1 << ((pid) % 8)))
 #define setbit(buf, pid) buf[(pid)/8] |= (1 << ((pid) % 8))
 #define clearbits(buf) memset(buf, 0, sizeof(PID_BIT_MAP))
+#define setallbits(buf) memset(buf, 0xFF, sizeof(PID_BIT_MAP))
+
+void update_bitmaps()
+{
+  int i, j;
+
+  for(i = 0; i < map_cnt; i++)
+  {
+    clearbits(pids_map[i].pidmap);
+    setbit(pids_map[i].pidmap, 0);
+    for(j = 0; j < MAX_CHANNELS; j++)
+    {
+      if(pids_map[i].pids[j] == -1) break;
+      if(pids_map[i].pids[j] == 8192)
+      {
+        setallbits(pids_map[i].pidmap);
+        break;
+      }
+      setbit(pids_map[i].pidmap, pids_map[i].pids[j]);
+      //fprintf(stderr, "MAP: %d, PID: %d\n", i, pids_map[i].pids[j]);
+    }
+  }
+}
 
 
 static int collect_section(section_t *section, int pusi, unsigned char *buf, unsigned int len)
@@ -1078,6 +1102,7 @@ int main(int argc, char **argv)
     }
   }
   }
+  update_bitmaps();
 
   if (signal(SIGHUP, SignalHandler) == SIG_IGN) signal(SIGHUP, SIG_IGN);
   if (signal(SIGINT, SignalHandler) == SIG_IGN) signal(SIGINT, SIG_IGN);
@@ -1242,8 +1267,7 @@ int main(int argc, char **argv)
              for (i = 0; i < map_cnt; i++) {
                if ( ((pids_map[i].start_time==-1) || (pids_map[i].start_time <= now))
 		    && ((pids_map[i].end_time==-1) || (pids_map[i].end_time >= now))) {
-                 for (j = 0; j < MAX_CHANNELS; j++) {
-                   if (pids_map[i].pids[j] == 8192 || pids_map[i].pids[j] == pid) {
+                 if(getbit(pids_map[i].pidmap, pid)) {
                      errno = 0;
 		     if(pids_map[i].filename)
                         write(pids_map[i].fd, buf, TS_SIZE);
@@ -1257,8 +1281,6 @@ int main(int argc, char **argv)
 			memcpy(&(pids_map[i].buf[pids_map[i].pos]), buf, bytes_read);
 			pids_map[i].pos += bytes_read;
 		     }
-                     break;
-                   }
                  }
                }
              }
