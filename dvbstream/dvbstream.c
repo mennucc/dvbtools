@@ -450,7 +450,7 @@ struct {
   int cnt;
 } PMT;
 
-typedef unsigned int PID_BIT_MAP[1024];
+typedef unsigned char PID_BIT_MAP[1024];
 
 #define getbit(buf, pid) (buf[(pid)/8] & (1 << ((pid) % 8)))
 #define setbit(buf, pid) buf[(pid)/8] |= (1 << ((pid) % 8))
