@@ -556,7 +556,7 @@ static int parse_pmt(int pusi, pmt_t *pmt, unsigned char *b, int l)
   seclen = ((buf[1] & 0x0F) << 8) | buf[2];
   pcr_pid = ((buf[8] & 0x1F) << 8) | buf[9];
   pmt->pids[pmt->pids_cnt++] = pcr_pid;
-  fprintf(stderr, "\nPROGRAM: %d, pcr_pid: %d, version: %d vs %d\n", prog, pcr_pid, pmt->version, version);
+  //fprintf(stderr, "\nPROGRAM: %d, pcr_pid: %d, version: %d vs %d\n", prog, pcr_pid, pmt->version, version);
   skip = ((buf[10] & 0x0F) << 8) | buf[11];
   if(skip+12 > seclen)
     return 0;
@@ -568,7 +568,7 @@ static int parse_pmt(int pusi, pmt_t *pmt, unsigned char *b, int l)
     pmt->pids[pmt->pids_cnt++] = pid;
     skip = ((buf[i+3] & 0x0F) << 8) | buf[i+4];
     i += skip+5;
-    fprintf(stderr, "prog %d, PID: %d, count: %d, type: 0x%x\n", prog, pid, pmt->pids_cnt, buf[i]);
+    //fprintf(stderr, "prog %d, PID: %d, count: %d, type: 0x%x\n", prog, pid, pmt->pids_cnt, buf[i]);
   }
   pmt->version = version;
 }
