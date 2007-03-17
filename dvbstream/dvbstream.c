@@ -450,7 +450,13 @@ struct {
   int cnt;
 } PMT;
 
-static unsigned char SI_PIDS[8192];
+typedef unsigned int PID_BIT_MAP[1024];
+
+#define getbit(buf, pid) (buf[(pid)/8] & (1 << ((pid) % 8)))
+#define setbit(buf, pid) buf[(pid)/8] |= (1 << ((pid) % 8))
+#define clearbits(buf) memset(buf, 0, sizeof(PID_BIT_MAP))
+
+static PID_BIT_MAP SI_PIDS;
 
 static int collect_section(section_t *section, int pusi, unsigned char *buf, unsigned int len)
 {
@@ -501,8 +507,8 @@ static int parse_pat(int pusi, unsigned char *b, int l)
   if(PAT.version == vers) //PAT didn't change
     return 1;
 
-  memset(&SI_PIDS, 0, sizeof(SI_PIDS));
-  SI_PIDS[0] = 1;
+  clearbits(SI_PIDS);
+  setbit(SI_PIDS, 0);
   seclen = ((buf[1] & 0x0F) << 8) | buf[2];
   num = (seclen - 9) / 4;
   if(PAT.entries_cnt != num)
@@ -520,7 +526,7 @@ static int parse_pat(int pusi, unsigned char *b, int l)
   {
     PAT.entries[j].program = (buf[i] << 8) | buf[i+1];
     PAT.entries[j].pmt_pid = ((buf[i+2] & 0x1F) << 8) | buf[i+3];
-    SI_PIDS[PAT.entries[j].pmt_pid] = 1;
+    setbit(SI_PIDS, PAT.entries[j].pmt_pid);
     i += 4;
     //fprintf(stderr, "PROGRAM: %d, pmt_pid: %d\n", PAT.entries[j].program, PAT.entries[j].pmt_pid);
     PMT.entries[j].section.pos = SECTION_LEN+1;
@@ -658,8 +664,8 @@ int main(int argc, char **argv)
   PAT.version = -1;
   PAT.section.pos = SECTION_LEN+1;
   memset(&PMT, 0, sizeof(PMT));
-  memset(&SI_PIDS, 0, sizeof(SI_PIDS));
-  SI_PIDS[0] = 1;
+  clearbits(SI_PIDS);
+  setbit(SI_PIDS, 0);
 
   /* Set default IP and port */
   strcpy(ipOut,"224.0.1.2");
