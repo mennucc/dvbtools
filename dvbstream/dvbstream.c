@@ -752,7 +752,7 @@ int main(int argc, char **argv)
   pids_map = NULL;
   map_cnt = 0;
 
-  fprintf(stderr,"dvbstream v0.6 - (C) Dave Chapman 2001-2004\n");
+  fprintf(stderr,"dvbstream v0.7 - (C) Dave Chapman 2001-2004\n");
   fprintf(stderr,"Released under the GPL.\n");
   fprintf(stderr,"Latest version available from http://www.linuxstb.org/\n");
 
