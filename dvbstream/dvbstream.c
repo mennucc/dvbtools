@@ -815,6 +815,9 @@ int main(int argc, char **argv)
     fprintf(stderr,"-ttl N      Sets TTL to N (default: 2) when streaming in RTP\n");
     fprintf(stderr,"-rtp        Sets output type to RTP (default when using network out)\n");
     fprintf(stderr,"-udp        Sets output type to UDP \n");
+    fprintf(stderr,"-prog       Selects PROGRAM mode (opens a demux on the whole TS)\n");
+    fprintf(stderr,"-pid        Selects PID mode (default)\n");
+
 
     fprintf(stderr,"\n-analyse    Perform a simple analysis of the bitrates of the PIDs in the transport stream\n");
 
