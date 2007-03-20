@@ -98,6 +98,11 @@ unsigned char diseqc=0;
 char pol=0;
 int streamtype = RTP;
 
+#define PID_MODE 0
+#define PROG_MODE 1
+static int selection_mode = PID_MODE;
+
+
 int open_fe(int* fd_frontend) {
     if((*fd_frontend = open(frontenddev[card],O_RDWR | O_NONBLOCK)) < 0){
         perror("FRONTEND DEVICE: ");
@@ -408,6 +413,8 @@ typedef struct {
   int pids[MAX_CHANNELS];
   int num;
   int pid_cnt;
+  int progs[MAX_CHANNELS];
+  int progs_cnt;
   PID_BIT_MAP pidmap;
   long start_time; // in seconds
   long end_time;   // in seconds
@@ -491,6 +498,28 @@ void update_bitmaps()
             //add the pmt_pid to the map
             //fprintf(stderr, "ADDING TO map %d PMT n. %d with PID: %d, j: %d\n", i, k, PAT.entries[k].pmt_pid, j);
             setbit(pids_map[i].pidmap, PAT.entries[k].pmt_pid);
+          }
+        }
+      }
+    }
+  }
+
+
+  for(j = 0; j < map_cnt; j++)
+  {
+    for(k = 0; k < pids_map[j].progs_cnt; k++)
+    {
+      for(i = 0; i < PAT.entries_cnt; i++)
+      {
+        if(pids_map[j].progs[k] == PAT.entries[i].program)
+        {
+          setbit(pids_map[j].pidmap, PAT.entries[i].pmt_pid);
+          for(n = 0; n < PMT.entries[i].pids_cnt; n++)
+          {
+            int pid = PMT.entries[i].pids[n];
+
+            setbit(pids_map[j].pidmap, pid);
+            //fprintf(stderr, "\nADDED to map %d PROG pid %d, prog: %d", j, pid, PAT.entries[i].program);
           }
         }
       }
@@ -713,6 +742,7 @@ int main(int argc, char **argv)
   long end_time=-1;
   struct timeval tv;
   int found;
+  int stream_whole_TS=0;
 
   /* Output: {uni,multi,broad}cast socket */
   char ipOut[20];
@@ -850,6 +880,7 @@ int main(int argc, char **argv)
 	  if(pids_map != NULL) {
 	    map_cnt++;
             pids_map[map_cnt-1].pid_cnt = 0;
+            pids_map[map_cnt-1].progs_cnt = 0;
             pids_map[map_cnt-1].start_time=start_time;
             pids_map[map_cnt-1].end_time=end_time;
             for(j=0; j < MAX_CHANNELS; j++) pids_map[map_cnt-1].pids[j] = -1;
@@ -917,6 +948,12 @@ int main(int argc, char **argv)
            specInv = INVERSION_ON;
         else
            specInv = INVERSION_AUTO;
+      }
+      else if(strcmp(argv[i],"-prog")==0) {
+        selection_mode = PROG_MODE;
+      }
+      else if(strcmp(argv[i],"-pid")==0) {
+        selection_mode = PID_MODE;
       }
       else if (strcmp(argv[i],"-o")==0) {
         to_stdout = 1;
@@ -1091,6 +1128,7 @@ int main(int argc, char **argv)
 
         // If we are currently processing a "-o:" option:
         if (map_cnt) {
+          if(selection_mode == PID_MODE) {
           // block for the map
           found = 0;
           for (j=0;j<MAX_CHANNELS;j++) {
@@ -1108,8 +1146,21 @@ int main(int argc, char **argv)
             pids_map[map_cnt-1].pids[pids_map[map_cnt-1].pid_cnt] = pid;
             pids_map[map_cnt-1].pid_cnt++;
           }
+          }
+          else {
+          // block for the map
+          stream_whole_TS=1;
+          setallbits(USER_PIDS);
+          found = 0;
+          for (j=0;j<MAX_CHANNELS;j++) {
+            if(pids_map[map_cnt-1].progs[j] == pid) found = 1;
+          }
+          if(found == 0)
+            pids_map[map_cnt-1].progs[pids_map[map_cnt-1].progs_cnt++] = pid;
+        }
         }
 
+        if(selection_mode == PID_MODE) {
         // block for the list of pids to demux
         found = 0;
         for (j=0;j<npids;j++) {
@@ -1130,6 +1181,7 @@ int main(int argc, char **argv)
             }
           }
         }
+      }
       }
     }
   }
@@ -1184,6 +1236,11 @@ int main(int argc, char **argv)
   
   fprintf(stderr,"dvbstream will stop after %d seconds (%d minutes)\n",secs,secs/60);
 
+  if(stream_whole_TS) {
+    npids=1;
+    pids[0] = 8192;
+  }
+  else
   for(i=0; i<npids; i++) {
     if(pids[i] == 8192) {
       npids = 1;
