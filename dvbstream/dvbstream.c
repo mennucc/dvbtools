@@ -466,6 +466,8 @@ struct {
 static int SI_fd[MAX_CHANNELS];
 static int SI_fd_cnt = 0;
 
+#define SDT_PID 0x11
+
 #define getbit(buf, pid) (buf[(pid)/8] & (1 << ((pid) % 8)))
 #define setbit(buf, pid) buf[(pid)/8] |= (1 << ((pid) % 8))
 #define clearbits(buf) memset(buf, 0, sizeof(PID_BIT_MAP))
@@ -514,6 +516,7 @@ void update_bitmaps()
         if(pids_map[j].progs[k] == PAT.entries[i].program)
         {
           setbit(pids_map[j].pidmap, PAT.entries[i].pmt_pid);
+          setbit(pids_map[j].pidmap, SDT_PID);
           for(n = 0; n < PMT.entries[i].pids_cnt; n++)
           {
             int pid = PMT.entries[i].pids[n];
