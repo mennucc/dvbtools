@@ -456,12 +456,19 @@ typedef struct {
   int version;
   int pids[MAX_PIDS];
   int pids_cnt;
+  uint8_t name[256];
 } pmt_t;
 
 struct {
   pmt_t *entries;
   int cnt;
 } PMT;
+
+static struct {
+  int len;	//section length
+  int version;
+  section_t section;
+} SDT;
 
 static int SI_fd[MAX_CHANNELS];
 static int SI_fd_cnt = 0;
@@ -582,6 +589,7 @@ static int parse_pat(int pusi, uint8_t *b, int l)
 
   clearbits(SI_PIDS);
   setbit(SI_PIDS, 0);
+  setbit(SI_PIDS, SDT_PID);
   seclen = ((buf[1] & 0x0F) << 8) | buf[2];
   num = (seclen - 9) / 4;
   if(PAT.entries_cnt != num)
@@ -604,7 +612,10 @@ static int parse_pat(int pusi, uint8_t *b, int l)
     //fprintf(stderr, "PROGRAM: %d, pmt_pid: %d\n", PAT.entries[j].program, PAT.entries[j].pmt_pid);
     PMT.entries[j].section.pos = SECTION_LEN+1;
     PMT.entries[j].version = -1;
+    PMT.entries[j].name[0] = 0;
   }
+  SDT.version=-1;
+  SDT.section.pos = SECTION_LEN+1;
 
   PAT.version = vers;
 
@@ -684,6 +695,84 @@ static int parse_pmt(int pusi, pmt_t *pmt, uint8_t *b, int l)
   return 2;
 }
 
+static int parse_sdt(int pusi, uint8_t *b, int l)
+{
+  unsigned int i, version, seclen, skip, prog, k, descr_len, found, len;
+  uint8_t *buf;
+
+  skip = collect_section(&(SDT.section), pusi, b, l);
+
+  if(!skip)
+    return 0;
+
+  buf = &(SDT.section.buf[skip]);
+
+  if(buf[0] != 0x42) //pmt id
+    return 0;
+  if(!(buf[5] & 1)) //not yet valid
+    return 0;
+
+  version = (buf[5] >> 1) & 0x1F;
+
+  if(SDT.version == version) //SDT didn't change
+    return 1;
+
+  seclen = ((buf[1] & 0x0F) << 8) | buf[2];
+  if(seclen < 12)
+    return 0;
+
+  i = 11;
+  while(i  < seclen - 4)
+  {
+    descr_len = ((buf[i+3] & 0x0F) << 8) | buf[i+4];
+    if(i+5+descr_len >= seclen)
+      break;
+    prog = (buf[i] << 8) | buf[i+1];
+    found = -1;
+    k = 0;
+    for(k = 0; k < PAT.entries_cnt, k < PMT.cnt; k++)
+      if(PAT.entries[k].program == prog)
+        found = k;
+
+    if(k != -1)
+    {
+      int j, len, dlen;
+
+      j = i + 5;
+      len = dlen = 0;
+      while(len < descr_len)
+      {
+        int provider_len, name_len, n;
+        pmt_t *pmt;
+
+        n = j;
+        dlen = buf[n+1];
+        if(len + dlen > descr_len) break;
+        if(buf[n] == 0x48)
+        {
+          provider_len = buf[n+3];
+          if(provider_len + 2 > dlen)
+            break;
+          n += 4 + provider_len;
+          name_len = buf[n];
+          if(provider_len + 3 + name_len > dlen)
+            break;
+          pmt = &PMT.entries[k];
+          memcpy(pmt->name, &buf[n+1], name_len);
+          pmt->name[name_len] = 0;
+          fprintf(stderr, "Program n. %d, name: '%s'\n", prog, pmt->name);
+        }
+        len += dlen+2;
+        j += dlen+2;
+      }
+    }
+    i += 5 + descr_len;
+  }
+  SDT.version = version;
+  return 2;
+}
+
+
 static int parse_ts_packet(uint8_t *buf)
 {
   int pid, l, af, pusi;
@@ -704,6 +793,8 @@ static int parse_ts_packet(uint8_t *buf)
     if(parse_pat(pusi, &buf[l], TS_SIZE - l) == 2)
       add_pmt_pids();
   }
+  else if(pid == SDT_PID)
+    parse_sdt(pusi, &buf[l], TS_SIZE - l);
   else
   {
     int i;
@@ -771,6 +862,10 @@ int main(int argc, char **argv)
   memset(&PMT, 0, sizeof(PMT));
   clearbits(SI_PIDS);
   setbit(SI_PIDS, 0);
+  memset(&SDT, 0, sizeof(SDT));
+  SDT.section.pos = SECTION_LEN+1;
+  SDT.version = -1;
+  setbit(SI_PIDS, SDT_PID);
   clearbits(USER_PIDS);
   setbit(USER_PIDS, 0);
 
