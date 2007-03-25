@@ -415,6 +415,8 @@ typedef struct {
   int pid_cnt;
   int progs[MAX_CHANNELS];
   int progs_cnt;
+  uint8_t **prognames;
+  int prognames_cnt;
   PID_BIT_MAP pidmap;
   long start_time; // in seconds
   long end_time;   // in seconds
@@ -530,6 +532,29 @@ void update_bitmaps()
 
             setbit(pids_map[j].pidmap, pid);
             //fprintf(stderr, "\nADDED to map %d PROG pid %d, prog: %d", j, pid, PAT.entries[i].program);
+          }
+        }
+      }
+    }
+  }
+
+
+  for(i = 0; i < map_cnt; i++)
+  {
+    for(j = 0; j < pids_map[i].prognames_cnt; j++)
+    {
+      for(k = 0; k < PMT.cnt; k++)
+      {
+        if(!strcmp(pids_map[i].prognames[j], PMT.entries[k].name))
+        {
+          setbit(pids_map[i].pidmap, PAT.entries[k].pmt_pid);
+          setbit(pids_map[i].pidmap, SDT_PID);
+          for(n = 0; n < PMT.entries[k].pids_cnt; n++)
+          {
+            int pid = PMT.entries[k].pids[n];
+
+            setbit(pids_map[i].pidmap, pid);
+            //fprintf(stderr, "\nADDED to map %d PROG pid %d, prog: %d", j, pid, PAT.entries[k].program);
           }
         }
       }
@@ -732,7 +757,9 @@ static int parse_sdt(int pusi, uint8_t *b, int l)
     k = 0;
     for(k = 0; k < PAT.entries_cnt, k < PMT.cnt; k++)
       if(PAT.entries[k].program == prog)
+      {
         found = k;
+        
 
     if(k != -1)
     {
@@ -766,6 +793,7 @@ static int parse_sdt(int pusi, uint8_t *b, int l)
         j += dlen+2;
       }
     }
+    }
     i += 5 + descr_len;
   }
   SDT.version = version;
@@ -794,7 +822,18 @@ static int parse_ts_packet(uint8_t *buf)
       add_pmt_pids();
   }
   else if(pid == SDT_PID)
-    parse_sdt(pusi, &buf[l], TS_SIZE - l);
+  {
+    if(parse_sdt(pusi, &buf[l], TS_SIZE - l) == 2)
+    {
+      int i;
+      for(i = 0; i < PMT.cnt; i++)
+      {
+        PMT.entries[i].section.pos = SECTION_LEN+1;
+        PMT.entries[i].version = -1;
+      }
+      update_bitmaps();
+    }
+  }
   else
   {
     int i;
@@ -808,6 +847,19 @@ static int parse_ts_packet(uint8_t *buf)
       }
     }
   }
+}
+
+static int is_string(char *s)
+{
+  int i, n, len;
+
+  n = 0;
+  len = strlen(s);
+  for(i = 0; i < len; i++)
+    if(isdigit(s[i]))
+      n++;
+
+  return (n != len);
 }
 
 int main(int argc, char **argv)
@@ -1250,14 +1302,30 @@ int main(int argc, char **argv)
           }
           else {
           // block for the map
+          int is_progname = is_string(argv[i]);
+          pids_map_t *map = &(pids_map[map_cnt-1]);
           stream_whole_TS=1;
           setallbits(USER_PIDS);
           found = 0;
+          if(is_progname) {
+            for(j=0;j<map->prognames_cnt;j++) {
+              if(!strcmp(map->prognames[j], argv[i]))
+                found = 1;
+            }
+            if(found == 0) {
+             map->prognames = realloc(map->prognames, (map->prognames_cnt+1)*sizeof(map->prognames));
+             map->prognames_cnt++;
+             map->prognames[map->prognames_cnt-1] = malloc(strlen(argv[i])+1);
+             strcpy(map->prognames[map->prognames_cnt-1], argv[i]);
+            }
+          }
+          else {
           for (j=0;j<MAX_CHANNELS;j++) {
             if(pids_map[map_cnt-1].progs[j] == pid) found = 1;
           }
           if(found == 0)
             pids_map[map_cnt-1].progs[pids_map[map_cnt-1].progs_cnt++] = pid;
+        }
         }
         }
 
