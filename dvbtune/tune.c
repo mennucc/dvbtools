@@ -96,7 +96,6 @@ static int do_diseqc(int fd, unsigned char sat_no, int polv, int hi_lo)
 	/* param: high nibble: reset bits, low nibble set bits,
 	* bits are: option, position, polarizaion, band
 	*/
-	sat_no--;
 	cmd.cmd.msg[3] =
     	    0xf0 | (((sat_no * 4) & 0x0f) | (polv ? 0 : 2) | (hi_lo ? 1 : 0));
 
