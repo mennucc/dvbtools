@@ -97,6 +97,7 @@ fe_hierarchy_t hier=HIERARCHY_DEFAULT;
 unsigned char diseqc=0;
 char pol=0;
 int streamtype = RTP;
+static int use_stdin=0;
 
 #define PID_MODE 0
 #define PROG_MODE 1
@@ -320,6 +321,7 @@ int process_telnet() {
                 while (cmd[i]==' ') i++;
                 srate=atoi(&cmd[i])*1000UL;
                 fprintf(stderr,"Tuning to %ld,%ld,%c\n",freq,srate,pol);
+                if(!use_stdin)
                 tune_it(fd_frontend,freq,srate,pol,tone,specInv,diseqc,modulation,HP_CodeRate,TransmissionMode,guardInterval,bandWidth, LP_CodeRate, hier);
               }
             }
@@ -989,6 +991,8 @@ int main(int argc, char **argv)
         do_analyse=1;
         output_type=RTP_NONE;
         if (secs==-1) { secs=10; }
+      } else if(strcmp(argv[i],"-stdin")==0) {
+        use_stdin = 1;
       } else if (strcmp(argv[i],"-i")==0) {
         if(pids_map != NULL) {
 	  fprintf(stderr, "ERROR! -i and -r can't be used with -o and -net.  Use -net instead\n");
@@ -1382,7 +1386,7 @@ int main(int argc, char **argv)
   if (signal(SIGALRM, SignalHandler) == SIG_IGN) signal(SIGALRM, SIG_IGN);
   alarm(ALARM_TIME);
 
-  if (freq!=0) {
+  if (freq!=0 && !use_stdin) {
     if (open_fe(&fd_frontend)) {
       fprintf(stderr,"Tuning to %ld Hz\n",freq);
       i=tune_it(fd_frontend,freq,srate,pol,tone,specInv,diseqc,modulation,HP_CodeRate,TransmissionMode,guardInterval,bandWidth, LP_CodeRate, hier);
@@ -1416,6 +1420,9 @@ int main(int argc, char **argv)
       pids[0] = 8192;
     }
   }
+  if(use_stdin) {
+    fd_dvr = fileno(stdin);
+  } else {
   for (i=0;i<npids;i++) {  
     if((fd[i] = open(demuxdev[card],O_RDWR|O_NONBLOCK)) < 0){
       fprintf(stderr,"FD %i: ",i);
@@ -1433,6 +1440,7 @@ int main(int argc, char **argv)
   for (i=0;i<npids;i++) {
     set_ts_filt(fd[i],pids[i],pestypes[i]);
     setbit(USER_PIDS, pids[i]);
+  }
   }
 
   gettimeofday(&tv,(struct timezone*) NULL);
@@ -1540,7 +1548,7 @@ int main(int argc, char **argv)
     } else if (output_type==RTP_PS) {
        if (read(fd_dvr,buf,TS_SIZE) > 0) {
          my_ts_to_ps((uint8_t*)buf, pids[0], pids[1]);
-       }
+       } else if(use_stdin) break;
     } else if(output_type==MAP_TS) {
        int bytes_read;
        bytes_read = read(fd_dvr, buf, TS_SIZE);
@@ -1576,6 +1584,7 @@ int main(int argc, char **argv)
            fprintf(stderr, "NON 0X47\n");
          }
        }
+       else if(use_stdin) break;
     } else {
       if (do_analyse) {
         if (read(fd_dvr,buf,TS_SIZE) > 0) {
@@ -1595,9 +1604,11 @@ int main(int argc, char **argv)
   close(socketIn);
 
   if (!to_stdout && !map_cnt) close(socketOut);
+  if(!use_stdin) {
   for (i=0;i<npids;i++) close(fd[i]);
   close(fd_dvr);
   close(fd_frontend);
+  }
 
   if (do_analyse) {
     for (i=0;i<8192;i++) {
