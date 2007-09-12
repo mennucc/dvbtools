@@ -969,6 +969,7 @@ int main(int argc, char **argv)
     fprintf(stderr,"-udp        Sets output type to UDP \n");
     fprintf(stderr,"-prog       Selects PROGRAM mode (opens a demux on the whole TS)\n");
     fprintf(stderr,"-pid        Selects PID mode (default)\n");
+    fprintf(stderr,"-stdin      Use STDIN as source rather than a DVB card\n");
 
 
     fprintf(stderr,"\n-analyse    Perform a simple analysis of the bitrates of the PIDs in the transport stream\n");
