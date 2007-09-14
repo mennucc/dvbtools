@@ -1606,9 +1606,9 @@ int main(int argc, char **argv)
 
   if (!to_stdout && !map_cnt) close(socketOut);
   if(!use_stdin) {
-  for (i=0;i<npids;i++) close(fd[i]);
-  close(fd_dvr);
-  close(fd_frontend);
+    for (i=0;i<npids;i++) close(fd[i]);
+    close(fd_dvr);
+    close(fd_frontend);
   }
 
   if (do_analyse) {
