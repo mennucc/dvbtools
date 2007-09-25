@@ -234,20 +234,20 @@ int tune_it(int fd_frontend, unsigned int freq, unsigned int srate, char pol, in
 	bandwidth==BANDWIDTH_8_MHZ ? 8 : (bandwidth==BANDWIDTH_7_MHZ ? 7 : 6));
       break;
     case FE_QPSK:
-    	pol = toupper(pol);
-	if (freq > 2200000) {
+      pol = toupper(pol);
+      if (freq > 2200000) {
         if (freq < SLOF) {
           feparams.frequency=(freq-LOF1);
-	  hi_lo = 0;
-	  base = LOF1;
+          hi_lo = 0;
+          base = LOF1;
         } else {
           feparams.frequency=(freq-LOF2);
-	  hi_lo = 1;
-	  base = LOF2;
-      } 
+          hi_lo = 1;
+          base = LOF2;
+        } 
       } else {
-          feparams.frequency=freq;
-	  base = 0;
+        feparams.frequency=freq;
+        base = 0;
       }
 
       fprintf(stderr,"tuning DVB-S to Freq: %u, Pol:%c Srate=%d, 22kHz tone=%s, LNB: %d, SLOF %d, LOF1: %d, LOF2: %d\n",
@@ -257,12 +257,12 @@ int tune_it(int fd_frontend, unsigned int freq, unsigned int srate, char pol, in
       feparams.u.qpsk.fec_inner=FEC_AUTO;
       dfd = fd_frontend;
 
-   if(do_diseqc(dfd, diseqc, (pol == 'V' ? 1 : 0), hi_lo) == 0)
+      if(do_diseqc(dfd, diseqc, (pol == 'V' ? 1 : 0), hi_lo) == 0)
 	fprintf(stderr, "DISEQC SETTING SUCCEDED\n");
-   else  {
+      else {
 	fprintf(stderr, "DISEQC SETTING FAILED\n");
-          return -1;
-        }
+	return -1;
+      }
       break;
     case FE_QAM:
       fprintf(stderr,"tuning DVB-C to %d, srate=%d\n",freq,srate);
