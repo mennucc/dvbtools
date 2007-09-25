@@ -107,8 +107,6 @@ static int do_diseqc(int fd, unsigned char sat_no, int polv, int hi_lo)
     }
     else 	//only tone and voltage
     {
-	fe_sec_voltage_t voltage;
-	
 	fprintf(stderr, "Setting only tone %s and voltage %dV\n", (hi_lo ? "ON" : "OFF"), (polv ? 13 : 18));
 	
 	if(ioctl(fd, FE_SET_VOLTAGE, (polv ? SEC_VOLTAGE_13 : SEC_VOLTAGE_18)) < 0)
@@ -127,7 +125,7 @@ int check_status(int fd_frontend,int type, struct dvb_frontend_parameters* fepar
   int32_t strength;
   fe_status_t festatus;
   struct pollfd pfd[1];
-  int status, locks=0, ok=0;
+  int locks=0, ok=0;
   time_t tm1, tm2;
 
   if (ioctl(fd_frontend,FE_SET_FRONTEND,feparams) < 0) {
