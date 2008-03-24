@@ -817,6 +817,8 @@ static int parse_ts_packet(uint8_t *buf)
     return 0;
   else if(af == 3)
     l += buf[4] + 1;
+  if(l >= TS_SIZE - 4)
+    return 0;
 
   if(pid == 0)
   {
