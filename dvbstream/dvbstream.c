@@ -1362,7 +1362,7 @@ int main(int argc, char **argv)
     }
   }
 
-  if ((output_type==RTP_PS) && (npids!=2)) {
+  if ((output_type==RTP_PS) && (npids!=3)) {
     fprintf(stderr,"ERROR: PS requires exactly two PIDS - video and audio.\n");
     exit(1);
   }
@@ -1550,7 +1550,7 @@ int main(int argc, char **argv)
       }
     } else if (output_type==RTP_PS) {
        if (read(fd_dvr,buf,TS_SIZE) > 0) {
-         my_ts_to_ps((uint8_t*)buf, pids[0], pids[1]);
+         my_ts_to_ps((uint8_t*)buf, pids[1], pids[2]);
        } else if(use_stdin) break;
     } else if(output_type==MAP_TS) {
        int bytes_read;
