@@ -603,7 +603,7 @@ int main(int argc, char** argv) {
         apid=atoi(argv[i]);
       } else if (strcmp(argv[i],"-pts")==0) {
         i++;
-        USER_PTS=atoi(argv[i]);
+        USER_PTS=atoi(argv[i]) * 90; // PTS has a resolution of 90 kHz
         fprintf(stderr,"Adding user PTS offset of %lld to every timestamp.\n",USER_PTS);
       } else {
         theargs[count]=atoi(argv[i]);
