@@ -61,6 +61,7 @@ The DVB stream must be piped to dvbtextsubs.  e.g.:\n\n\
     cat 0*.vdr | dvbtextsubs -vdr 888 > output.xml\n\
 or: dvbtextsubs 2320 888 < file.ts > output.xml\n\n\
 Options: -srt      Output subtitles in Subviewer format\n\
+         -keepempty Output also empty lines\n\
          -pts      PTS offset (in ms) to add to every PTS in output file\n\
          -apts     Use audio PTS timestamps instead of Teletext PTS\n\
                    (for broadcasters that broadcast no or incorrect teletext PTS)\n\
@@ -80,6 +81,7 @@ int no_pts_warning=0;
 int keeppts=0;
 uint16_t apid=0;
 int use_apts=0;
+int keep_empty=0;
 
 /* Structure of Transport Stream (from ISO/IEC 13818-1):
 
@@ -586,6 +588,9 @@ int main(int argc, char** argv) {
   } else {
     count=0;
     for (i=1;i<argc;i++) {
+      if (strcmp(argv[i],"-keepempty")==0) {
+        keep_empty=1;
+      } else
       if (strcmp(argv[i],"-d")==0) {
         debug=1;
       } else if (strcmp(argv[i],"-a")==0) {
