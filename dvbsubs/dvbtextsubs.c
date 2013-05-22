@@ -109,12 +109,12 @@ transport_packet() {
 int verbose=0;
 int displayed_header=0;
 uint64_t PTS=0;
-uint64_t USER_PTS=0;
+int64_t USER_PTS=0;
 uint64_t audio_pts=0;
 uint64_t first_audio_pts=0;
 int audio_pts_wrap=0;
 int pts_wrap=0;
-uint64_t FIRST_PTS=0;
+int64_t FIRST_PTS=0;
 int sub_count=0;
 int prev_PTS=0;
 
@@ -222,6 +222,13 @@ void print_xml(FILE* fd, subtitle_t* subtitle) {
   int n;
   int colour;
   int nonempty_lines=0;
+  uint64_t startpts=subtitle->start_PTS, endpts=subtitle->end_PTS;
+  if (!keeppts) {
+    if(startpts < FIRST_PTS)
+      return;
+    startpts-=FIRST_PTS; 
+    endpts-=FIRST_PTS; 
+  }
 
   if (subtitle->num_lines==0) { return; }
 
@@ -251,10 +258,10 @@ void print_xml(FILE* fd, subtitle_t* subtitle) {
   }
 
   if(!keep_empty && nonempty_lines==0) return;
-  fprintf(fd,"    <spu lang=\"%s\" start=\"%s\"",langs[subtitle->lang],pts2hmsu(subtitle->start_PTS,'.'));
-  fprintf(stderr,"%s\r",pts2hmsu(subtitle->start_PTS,'.'));
+  fprintf(fd,"    <spu lang=\"%s\" start=\"%s\"",langs[subtitle->lang],pts2hmsu(startpts,'.'));
+  fprintf(stderr,"%s\r",pts2hmsu(startpts,'.'));
   if (subtitle->has_end_pts) {
-    fprintf(fd," end=\"%s\"",pts2hmsu(subtitle->end_PTS,'.'));
+    fprintf(fd," end=\"%s\"",pts2hmsu(endpts,'.'));
   }
   fprintf(fd,">\n");
   
@@ -277,7 +284,7 @@ void print_xml(FILE* fd, subtitle_t* subtitle) {
           xml_output_char(fd,vtx2iso8559_1_table[subtitle->lang][ch-32]);
         }
       } else {
-        if ((i >= subtitle->first_char[row]) && (i <= subtitle->last_char[row])) fprintf(fd," ");
+        //if ((i >= subtitle->first_char[row]) && (i <= subtitle->last_char[row])) fprintf(fd," ");
         if (ch < 8) {
           if (colour!=-1) {
             fprintf(fd,"</%s>",colours[colour]);
@@ -307,8 +314,16 @@ void print_subviewer(FILE* fd, subtitle_t* subtitle) {
   int colour;
   int j;
   int nonempty_lines=0;
+  uint64_t startpts=subtitle->start_PTS, endpts=subtitle->end_PTS;
+  if (!keeppts) {
+    if(startpts < FIRST_PTS)
+      return;
+    startpts-=FIRST_PTS; 
+    endpts-=FIRST_PTS; 
+  }
 
   if (subtitle->num_lines==0) { return; }
+
 
 //  printf("\"");
 //  for (i=1;i<=40;i++) printf("%c",'0'+(i%10));
@@ -341,9 +356,9 @@ void print_subviewer(FILE* fd, subtitle_t* subtitle) {
   }
 
   if(!keep_empty && nonempty_lines==0) return;
-  fprintf(stderr,"%s\r",pts2hmsu(subtitle->start_PTS,','));
-  fprintf(fd,"%d\n%s --> ",++sub_count,pts2hmsu(subtitle->start_PTS,','));
-  fprintf(fd,"%s\n",pts2hmsu(subtitle->end_PTS,','));
+    fprintf(stderr,"%s\r",pts2hmsu(startpts,','));
+  fprintf(fd,"%d\n%s --> ",++sub_count,pts2hmsu(startpts,','));
+  fprintf(fd,"%s\n",pts2hmsu(endpts,','));
   
   j=0;
   for (row=0;row<subtitle->num_lines;row++) {
@@ -388,7 +403,6 @@ void print_page(mag_struct *mag) {
 
   subtitle.num_lines=0;
   subtitle.start_PTS=mag->PTS;
-  if (!keeppts) { subtitle.start_PTS-=FIRST_PTS; }
   subtitle.lang=mag->lang;
 
   if (mag->num_valid_lines>0) {
