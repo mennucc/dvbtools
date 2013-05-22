@@ -221,6 +221,7 @@ void print_xml(FILE* fd, subtitle_t* subtitle) {
   char tmp[41];
   int n;
   int colour;
+  int nonempty_lines=0;
 
   if (subtitle->num_lines==0) { return; }
 
@@ -243,8 +244,13 @@ void print_xml(FILE* fd, subtitle_t* subtitle) {
     tmp[n]=0;
 //    fprintf(fd,"\"%s\"\n",tmp);
 //    fprintf(fd,"First_char[%d]=%d, last_char[%d]=%d\n",row,subtitle->first_char[row],row,subtitle->last_char[row]);
+    if(n!=40) abort();
+    //an empty line is a line something not a color or a space
+    for (i=0;i<40;i++) { ch=(subtitle->lines[row][i-1]&0x7f); if (  ch != 32 && ch>= 8  ) break; }
+    if (i != 40  )   nonempty_lines++;
   }
 
+  if(!keep_empty && nonempty_lines==0) return;
   fprintf(fd,"    <spu lang=\"%s\" start=\"%s\"",langs[subtitle->lang],pts2hmsu(subtitle->start_PTS,'.'));
   fprintf(stderr,"%s\r",pts2hmsu(subtitle->start_PTS,'.'));
   if (subtitle->has_end_pts) {
@@ -253,6 +259,12 @@ void print_xml(FILE* fd, subtitle_t* subtitle) {
   fprintf(fd,">\n");
   
   for (row=0;row<subtitle->num_lines;row++) {
+    for (i=1;i<=40;i++) {
+      ch=(subtitle->lines[row][i-1]&0x7f);
+      if (  ch != 32 && ch>= 8  ) break;
+    }
+    if (!keep_empty && i > 40  )   continue; //line is only colors and space
+
     fprintf(fd,"      <line row=\"%d\" col=\"%d\">",subtitle->row_no[row],subtitle->first_char[row]);
     colour=-1;
     for (i=1;i<=40;i++) {
@@ -294,6 +306,7 @@ void print_subviewer(FILE* fd, subtitle_t* subtitle) {
   int n;
   int colour;
   int j;
+  int nonempty_lines=0;
 
   if (subtitle->num_lines==0) { return; }
 
@@ -311,19 +324,32 @@ void print_subviewer(FILE* fd, subtitle_t* subtitle) {
       if (ch < 32) ch=32;
       tmp[n++]=ch;
     }
+    if(n!=40) abort();
+    for (i=0;i<40;i++) { if ( tmp[i-1] != 32 ) break; }
+    if (i != 40  )   nonempty_lines++;
+
     subtitle->last_char[row]=40;
     while ((subtitle->last_char[row] >0) && (tmp[subtitle->last_char[row]-1]==' ')) subtitle->last_char[row]--;
     tmp[n]=0;
+
+    if(n!=40) abort();
+    for (i=0;i<40;i++) { if ( (subtitle->lines[row][i-1]&0x7f) > 32 ) break; }
+    if (i != 40  )   nonempty_lines++;
+
 //    fprintf(fd,"\"%s\"\n",tmp);
 //    fprintf(fd,"First_char[%d]=%d, last_char[%d]=%d\n",row,subtitle->first_char[row],row,subtitle->last_char[row]);
   }
 
+  if(!keep_empty && nonempty_lines==0) return;
   fprintf(stderr,"%s\r",pts2hmsu(subtitle->start_PTS,','));
   fprintf(fd,"%d\n%s --> ",++sub_count,pts2hmsu(subtitle->start_PTS,','));
   fprintf(fd,"%s\n",pts2hmsu(subtitle->end_PTS,','));
   
   j=0;
   for (row=0;row<subtitle->num_lines;row++) {
+    for (i=1;i<=40;i++) { if ( (subtitle->lines[row][i-1]&0x7f) > 32 ) break; }
+    if (!keep_empty && i > 40  )   continue;
+
     colour=-1;
     for (i=1;i<=40;i++) {
       ch=subtitle->lines[row][i-1]&0x7f;
