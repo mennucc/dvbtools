@@ -285,7 +285,7 @@ void print_xml(FILE* fd, subtitle_t* subtitle) {
           colour=ch;
           fprintf(fd,"<%s>",colours[colour]);
         } else if (ch == 29) {
-          fprintf(fd,"<bg />");
+          fprintf(fd,"<bg/>");
         } else if ((ch!=0x0b) && (ch!=0x0a) &&   // Start/end box
                    (ch!=0x0d)) {                 // Double height
           fprintf(fd,"<%02x>",ch);          
