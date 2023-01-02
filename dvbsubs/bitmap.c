@@ -1,6 +1,9 @@
 #include <stdlib.h>
 #include <png.h>
 
+#include <string.h>
+#include <setjmp.h>
+ 
 #include "bitmap.h"
 
 void init_bitmap(bitmap_t* bitmap, int width, int height, int colour) {
