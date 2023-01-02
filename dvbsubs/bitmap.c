@@ -56,11 +56,11 @@ int write_png(bitmap_t* bitmap, char *file_name,unsigned char* my_palette,unsign
     png_set_filter(png_ptr, 0, PNG_FILTER_NONE);
 
     /* set the zlib compression level */
-    png_set_compression_level(png_ptr, Z_BEST_COMPRESSION);
+    png_set_compression_level(png_ptr, PNG_Z_DEFAULT_COMPRESSION);
 
     /* set other zlib parameters */
     png_set_compression_mem_level(png_ptr, 8);
-    png_set_compression_strategy(png_ptr, Z_DEFAULT_STRATEGY);
+    png_set_compression_strategy(png_ptr, PNG_Z_DEFAULT_STRATEGY);
     png_set_compression_window_bits(png_ptr, 15);
     png_set_compression_method(png_ptr, 8);
 
