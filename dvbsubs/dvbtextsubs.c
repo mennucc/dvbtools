@@ -52,7 +52,6 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "vtxdecode.h"
 #include "pes.h"
 
-#define PESBUFSIZE 1265536
 #define VERSION "0.3"
 #define USAGE "\n\
 USAGE: dvbtextsubs [options] pid pageno\n\
