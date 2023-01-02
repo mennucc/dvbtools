@@ -44,7 +44,7 @@ int write_png(bitmap_t* bitmap, char *file_name,unsigned char* my_palette,unsign
         return -1;
     }
 
-    if (setjmp(png_ptr->jmpbuf)) {
+    if (setjmp(png_jmpbuf(png_ptr))) {
         png_destroy_write_struct(&png_ptr, &info_ptr);
         fclose(fp);
         return -1;
