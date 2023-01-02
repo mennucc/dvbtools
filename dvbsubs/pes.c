@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <fcntl.h>
+#include <assert.h>
 
 #include "pes.h"
 
@@ -85,6 +86,7 @@ int read_pes_packet (int fd, uint16_t pid, uint8_t* buf, int vdrmode) {
         if (count!=3) { fprintf(stderr,"Incomplete header, stop.\n"); return(-1); }
         stream_id=buf[3];
         PES_packet_length=(buf[4]<<8)|buf[5];
+	assert(PESBUFSIZE -6 > PES_packet_length); 
         count=safe_read(fd,&buf[6],PES_packet_length);
         if (count!=PES_packet_length) { fprintf(stderr,"Incomplete packet, stop\n.\n"); return(-1);}
 
@@ -139,11 +141,13 @@ int read_pes_packet (int fd, uint16_t pid, uint8_t* buf, int vdrmode) {
                 fprintf(stderr,"ERROR: PID %d does not contain a Private Data stream.  Aborting.\n",pid);
               }
               PES_packet_length=(tsbuf[i+4]<<8)|tsbuf[i+5];
+	      assert(PESBUFSIZE > PES_packet_length); 
               memcpy(buf,&tsbuf[i],ts_payload);
               n=ts_payload;
             }
           }
         } else {
+	  assert( (n+ts_payload) <=  PESBUFSIZE);
           memcpy(&buf[n],&tsbuf[i],ts_payload);
           n+=ts_payload;
         }
