@@ -79,13 +79,14 @@ int read_pes_packet (int fd, uint16_t pid, uint8_t* buf, int vdrmode) {
   if (vdrmode) {
     while (!finished) {
       count=safe_read(fd,buf,3);
+      if (count!=3) { fprintf(stderr,"Incomplete header, stop.\n"); return(-1); }
       if ((buf[0]==0x00) && (buf[1]==0x00) && (buf[2]==0x01)) {
         count=safe_read(fd,&buf[3],3);
-        if (count!=3) return(-1);
+        if (count!=3) { fprintf(stderr,"Incomplete header, stop.\n"); return(-1); }
         stream_id=buf[3];
         PES_packet_length=(buf[4]<<8)|buf[5];
         count=safe_read(fd,&buf[6],PES_packet_length);
-        if (count!=PES_packet_length) return(-1);
+        if (count!=PES_packet_length) { fprintf(stderr,"Incomplete packet, stop\n.\n"); return(-1);}
 
         if (stream_id==0xbd) {
           finished=1;
@@ -106,7 +107,7 @@ int read_pes_packet (int fd, uint16_t pid, uint8_t* buf, int vdrmode) {
     n=0; // Bytes copied into buf.
     while (!finished) {
       count=safe_read(fd,tsbuf,188);
-     if (count!=188) return(-1);
+      if (count!=188) {fprintf(stderr,"End of file? Stop.\n"); return(-1);}
   
       if (tsbuf[0]!=0x47) { 
         fprintf(stderr,"ERROR: TS sync byte not present, aborting.\n");
