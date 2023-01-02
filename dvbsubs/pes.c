@@ -16,10 +16,14 @@ extern int audio_pts_wrap;
 extern uint16_t apid;
 
 ssize_t safe_read(int fd, unsigned char* buf, size_t count) {
-  ssize_t n;
+  ssize_t n=1, t=0;
 
-  n=read(fd,buf,count);
-  return(n);
+  while (n>0 && count >0) {
+    n=read(fd,buf+t,count);
+    count-=n;
+    t+=n;
+  }
+  return t;
 }
 
 char pts_text[30];
