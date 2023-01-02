@@ -1,7 +1,7 @@
 CC=gcc
 OBJS=dvbsubs dvbtextsubs xml2spumux xml2srt
 MANPAGES=dvbtextsubs.1
-CFLAGS+=-Wall
+CFLAGS+=-Wall -Wno-unused-but-set-variable
 
 INCS+=-I/usr/include/libxml2 -I/usr/include/freetype2
 
