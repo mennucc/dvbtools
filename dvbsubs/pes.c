@@ -74,6 +74,8 @@ int read_pes_packet (int fd, uint16_t pid, uint8_t* buf, int vdrmode) {
   int ts_payload;
   uint64_t tmp_pts;
 
+  memset(buf,0xff,PESBUFSIZE);
+  
   if (vdrmode) {
     while (!finished) {
       count=safe_read(fd,buf,3);
@@ -102,8 +104,6 @@ int read_pes_packet (int fd, uint16_t pid, uint8_t* buf, int vdrmode) {
     }
   } else {
     n=0; // Bytes copied into buf.
-  
-    memset(buf,0xff,sizeof(buf));
     while (!finished) {
       count=safe_read(fd,tsbuf,188);
      if (count!=188) return(-1);
